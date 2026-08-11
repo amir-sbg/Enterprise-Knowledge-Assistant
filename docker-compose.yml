@@ -1,0 +1,16 @@
+services:
+  rag-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      RAG_INDEX_PATH: /app/indexes/demo
+      RAG_CACHE_PATH: /app/cache/query_cache.json
+    volumes:
+      - rag-index:/app/indexes
+      - rag-cache:/app/cache
+
+volumes:
+  rag-index:
+  rag-cache:
+
