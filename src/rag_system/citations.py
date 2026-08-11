@@ -6,7 +6,7 @@ from rag_system.schema import Answer
 from rag_system.text import token_set
 
 
-@dataclass(slots=True)
+@dataclass
 class CitationReport:
     citation_accuracy: float
     faithfulness: float
@@ -59,4 +59,3 @@ def _citation_marker_accuracy(text: str, citation_count: int) -> float:
     expected = {f"[{idx}]" for idx in range(1, citation_count + 1)}
     present = {marker for marker in expected if marker in text}
     return len(present) / len(expected)
-

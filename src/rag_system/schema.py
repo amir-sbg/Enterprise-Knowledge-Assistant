@@ -7,14 +7,14 @@ from typing import Any
 Metadata = dict[str, Any]
 
 
-@dataclass(slots=True)
+@dataclass
 class Document:
     id: str
     text: str
     metadata: Metadata = field(default_factory=dict)
 
 
-@dataclass(slots=True)
+@dataclass
 class Chunk:
     id: str
     document_id: str
@@ -24,7 +24,7 @@ class Chunk:
     end_token: int = 0
 
 
-@dataclass(slots=True)
+@dataclass
 class RetrievedChunk:
     chunk: Chunk
     score: float
@@ -33,7 +33,7 @@ class RetrievedChunk:
     rerank_score: float = 0.0
 
 
-@dataclass(slots=True)
+@dataclass
 class Citation:
     chunk_id: str
     document_id: str
@@ -42,7 +42,7 @@ class Citation:
     score: float
 
 
-@dataclass(slots=True)
+@dataclass
 class Answer:
     question: str
     text: str
@@ -51,11 +51,10 @@ class Answer:
     metrics: Metadata = field(default_factory=dict)
 
 
-@dataclass(slots=True)
+@dataclass
 class EvalCase:
     id: str
     question: str
     expected_doc_ids: list[str]
     answer_keywords: list[str]
     filters: Metadata = field(default_factory=dict)
-

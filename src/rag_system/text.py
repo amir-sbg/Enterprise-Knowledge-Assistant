@@ -4,6 +4,34 @@ import re
 from collections.abc import Iterable
 
 TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_\-./]*")
+STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "before",
+    "by",
+    "can",
+    "do",
+    "for",
+    "from",
+    "how",
+    "in",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "should",
+    "the",
+    "to",
+    "what",
+    "when",
+    "with",
+}
 
 
 def normalize_text(text: str) -> str:
@@ -16,6 +44,10 @@ def tokenize(text: str) -> list[str]:
 
 def token_set(text: str) -> set[str]:
     return set(tokenize(text))
+
+
+def content_terms(text: str) -> set[str]:
+    return {token for token in tokenize(text) if token not in STOPWORDS and len(token) > 2}
 
 
 def batched(items: list[str], size: int, stride: int) -> Iterable[tuple[int, int, list[str]]]:
@@ -31,4 +63,3 @@ def batched(items: list[str], size: int, stride: int) -> Iterable[tuple[int, int
         if end == len(items):
             break
         start += stride
-

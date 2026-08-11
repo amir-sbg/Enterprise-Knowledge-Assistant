@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from rag_system.schema import Answer, Citation, RetrievedChunk
-from rag_system.text import token_set
+from rag_system.text import content_terms, token_set
 
 
 SENTENCE_RE = re.compile(r"(?<=[.!?])\s+")
@@ -19,7 +19,7 @@ class ExtractiveAnswerer:
                 retrieval=[],
             )
 
-        q_terms = token_set(question)
+        q_terms = content_terms(question) or token_set(question)
         citations: list[Citation] = []
         answer_parts: list[str] = []
 
@@ -51,4 +51,3 @@ def _best_sentence(text: str, q_terms: set[str]) -> str:
     if not sentences:
         return text.strip()
     return max(sentences, key=lambda sentence: len(token_set(sentence) & q_terms))
-

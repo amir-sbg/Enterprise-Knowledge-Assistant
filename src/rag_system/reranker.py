@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from rag_system.schema import RetrievedChunk
-from rag_system.text import token_set, tokenize
+from rag_system.text import content_terms, token_set, tokenize
 
 
 class LightweightReranker:
     def score(self, query: str, item: RetrievedChunk) -> float:
-        q_terms = token_set(query)
+        q_terms = content_terms(query) or token_set(query)
         c_terms = token_set(item.chunk.text)
         overlap = len(q_terms & c_terms) / max(len(q_terms), 1)
 
@@ -26,4 +26,3 @@ class LightweightReranker:
             item.score = item.rerank_score
             reranked.append(item)
         return sorted(reranked, key=lambda item: item.score, reverse=True)[:top_k]
-

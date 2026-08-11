@@ -8,7 +8,7 @@ from typing import Iterator
 from rag_system.text import tokenize
 
 
-@dataclass(slots=True)
+@dataclass
 class CostModel:
     input_per_1k: float = 0.00015
     output_per_1k: float = 0.00060
@@ -29,4 +29,3 @@ def latency_timer() -> Iterator[dict[str, float]]:
         yield result
     finally:
         result["latency_ms"] = (time.perf_counter() - start) * 1000
-
