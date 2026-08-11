@@ -76,9 +76,9 @@ The evaluation runner reports:
 - MRR
 - Answer correctness
 - Faithfulness
+- Hallucination rate
 - Citation accuracy
 - Latency per query
 - Estimated token/cost per query
 
 The goal is not to hide behind a polished chat interface; it is to show whether the retrieval and answer pipeline can be measured and trusted.
-

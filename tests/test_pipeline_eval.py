@@ -27,4 +27,5 @@ def test_eval_suite_reports_retrieval_metrics(tmp_path: Path):
 
     assert report["summary"]["cases"] == 4
     assert report["summary"]["recall_at_k"] >= 0.75
+    assert "hallucination_rate" in report["summary"]
     assert "cost_per_query_avg" in report["summary"]

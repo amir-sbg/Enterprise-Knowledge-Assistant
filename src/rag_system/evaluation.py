@@ -55,6 +55,7 @@ def evaluate_pipeline(
                 "mrr": reciprocal_rank,
                 "answer_correctness": correctness,
                 "faithfulness": answer.metrics.get("faithfulness", 0.0),
+                "hallucination_rate": 1.0 - answer.metrics.get("faithfulness", 0.0),
                 "citation_accuracy": citation_accuracy,
                 "latency_ms": answer.metrics.get("latency_ms", 0.0),
                 "estimated_cost_usd": answer.metrics.get("estimated_cost_usd", 0.0),
@@ -70,6 +71,9 @@ def evaluate_pipeline(
             if rows
             else 0.0,
             "faithfulness": round(mean([row["faithfulness"] for row in rows]), 4) if rows else 0.0,
+            "hallucination_rate": round(mean([row["hallucination_rate"] for row in rows]), 4)
+            if rows
+            else 0.0,
             "citation_accuracy": round(mean([row["citation_accuracy"] for row in rows]), 4)
             if rows
             else 0.0,
@@ -95,4 +99,3 @@ def _answer_correctness(answer: str, keywords: list[str]) -> float:
     answer_terms = token_set(answer)
     hits = sum(1 for keyword in keywords if token_set(keyword) & answer_terms)
     return hits / len(keywords)
-
