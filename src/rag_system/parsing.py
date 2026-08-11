@@ -27,16 +27,20 @@ def _load_file(path: Path) -> list[Document]:
     if suffix == ".jsonl":
         return _load_jsonl(path)
 
-    text = normalize_text(path.read_text(encoding="utf-8"))
+    raw_text = path.read_text(encoding="utf-8")
+    front_matter, body = _split_front_matter(raw_text)
+    text = normalize_text(body)
+    metadata = {
+        "source": str(path),
+        "title": path.stem.replace("-", " ").replace("_", " ").title(),
+        "file_type": suffix.lstrip("."),
+    }
+    metadata.update(front_matter)
     return [
         Document(
             id=path.stem,
             text=text,
-            metadata={
-                "source": str(path),
-                "title": path.stem.replace("-", " ").replace("_", " ").title(),
-                "file_type": suffix.lstrip("."),
-            },
+            metadata=metadata,
         )
     ]
 
@@ -60,3 +64,19 @@ def _load_jsonl(path: Path) -> list[Document]:
         )
     return docs
 
+
+def _split_front_matter(text: str) -> tuple[dict[str, str], str]:
+    if not text.startswith("---\n"):
+        return {}, text
+
+    _, rest = text.split("---\n", 1)
+    if "---\n" not in rest:
+        return {}, text
+    header, body = rest.split("---\n", 1)
+    metadata: dict[str, str] = {}
+    for line in header.splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        metadata[key.strip()] = value.strip().strip('"')
+    return metadata, body
