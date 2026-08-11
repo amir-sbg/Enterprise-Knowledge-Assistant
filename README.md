@@ -31,6 +31,18 @@ The default implementation runs locally with deterministic embeddings and an ext
 - Simple web frontend
 - Docker setup
 
+## Architecture notes
+
+The retrieval path combines lexical and semantic evidence instead of relying on one search mode:
+
+- **BM25** handles exact policy terms, acronyms, and rare keywords.
+- **Hash embeddings** provide deterministic semantic search for local development and CI.
+- **Hybrid fusion** merges BM25 and vector candidates before reranking.
+- **Reranking** prioritizes chunks that match the rewritten query and have source metadata.
+- **Citation verification** checks whether generated claims are supported by cited chunks.
+
+This keeps the project runnable on a laptop while still reflecting the same interfaces used with production embedding models, vector databases, and hosted LLMs.
+
 ## Quick start
 
 ```bash
@@ -50,6 +62,15 @@ uvicorn rag_system.api:app --reload
 ```
 
 Open `http://localhost:8000`.
+
+Useful API routes:
+
+```text
+POST /api/ingest     build or rebuild the local index
+POST /api/query      retrieve, rerank, answer, cite, and score one question
+POST /api/evaluate   run the evaluation set and return aggregate metrics
+GET  /api/health     check whether the service and index are available
+```
 
 ## Docker
 
@@ -82,3 +103,15 @@ The evaluation runner reports:
 - Estimated token/cost per query
 
 The goal is not to hide behind a polished chat interface; it is to show whether the retrieval and answer pipeline can be measured and trusted.
+
+Example summary from the bundled sample data:
+
+```json
+{
+  "recall_at_k": 1.0,
+  "mrr": 1.0,
+  "faithfulness": 1.0,
+  "citation_accuracy": 1.0,
+  "hallucination_rate": 0.0
+}
+```
