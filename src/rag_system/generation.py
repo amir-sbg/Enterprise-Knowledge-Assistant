@@ -20,13 +20,26 @@ class ExtractiveAnswerer:
             )
 
         q_terms = content_terms(question) or token_set(question)
+        min_overlap = 2 if len(q_terms) >= 4 else 1
         citations: list[Citation] = []
         answer_parts: list[str] = []
 
-        for item in retrieved[:max_citations]:
+        candidates = []
+        for item in retrieved:
             sentence = _best_sentence(item.chunk.text, q_terms)
             if not sentence:
                 continue
+            overlap = len(content_terms(sentence) & q_terms)
+            if overlap >= min_overlap:
+                candidates.append((overlap, item.score, item, sentence))
+
+        if not candidates and retrieved:
+            sentence = _best_sentence(retrieved[0].chunk.text, q_terms)
+            candidates.append((0, retrieved[0].score, retrieved[0], sentence))
+
+        candidates.sort(key=lambda row: (row[0], row[1]), reverse=True)
+
+        for _, _, item, sentence in candidates[:max_citations]:
             citations.append(
                 Citation(
                     chunk_id=item.chunk.id,

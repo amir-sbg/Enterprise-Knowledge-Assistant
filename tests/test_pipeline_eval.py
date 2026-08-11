@@ -13,6 +13,7 @@ def test_pipeline_returns_cited_answer(tmp_path: Path):
 
     assert "restricted" in answer.text.lower()
     assert answer.citations
+    assert answer.citations[0].document_id == "security-policy"
     assert answer.metrics["citation_accuracy"] > 0
     assert answer.metrics["latency_ms"] >= 0
 
@@ -27,4 +28,3 @@ def test_eval_suite_reports_retrieval_metrics(tmp_path: Path):
     assert report["summary"]["cases"] == 4
     assert report["summary"]["recall_at_k"] >= 0.75
     assert "cost_per_query_avg" in report["summary"]
-
