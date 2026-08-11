@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Enterprise Knowledge Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Production RAG / LLM System</p>
+        <h1>Enterprise Knowledge Assistant</h1>
+        <p>
+          Hybrid retrieval, reranking, citation verification, and evaluation in one compact
+          service.
+        </p>
+      </section>
+
+      <section class="panel">
+        <label for="question">Ask a policy or operations question</label>
+        <textarea id="question" rows="3">What should employees do before sending restricted data?</textarea>
+        <div class="controls">
+          <button id="ask">Ask</button>
+          <button id="eval">Run eval</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Answer</h2>
+        <div id="answer" class="answer muted">Waiting for a question.</div>
+      </section>
+
+      <section class="grid">
+        <div class="panel">
+          <h2>Citations</h2>
+          <ol id="citations" class="citations"></ol>
+        </div>
+        <div class="panel">
+          <h2>Metrics</h2>
+          <pre id="metrics">{}</pre>
+        </div>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
+

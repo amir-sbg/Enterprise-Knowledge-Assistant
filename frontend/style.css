@@ -1,0 +1,146 @@
+:root {
+  color-scheme: light;
+  --bg: #f5f7fb;
+  --ink: #111827;
+  --muted: #657083;
+  --line: #dfe5ef;
+  --accent: #2658ff;
+  --panel: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: radial-gradient(circle at top left, #e9efff 0, var(--bg) 36rem);
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  margin: 0;
+}
+
+.shell {
+  margin: 0 auto;
+  max-width: 1080px;
+  padding: 48px 20px;
+}
+
+.hero {
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+h1 {
+  font-size: clamp(2.4rem, 8vw, 5rem);
+  letter-spacing: -0.07em;
+  line-height: 0.92;
+  margin: 0 0 16px;
+}
+
+h2 {
+  font-size: 1rem;
+  margin: 0 0 12px;
+}
+
+.hero p:last-child {
+  color: var(--muted);
+  font-size: 1.15rem;
+  max-width: 700px;
+}
+
+.panel {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
+  margin-bottom: 18px;
+  padding: 20px;
+}
+
+label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+textarea {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font: inherit;
+  min-height: 96px;
+  padding: 14px;
+  resize: vertical;
+  width: 100%;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+button {
+  background: var(--ink);
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 11px 18px;
+}
+
+button:hover {
+  background: var(--accent);
+}
+
+.answer {
+  font-size: 1.04rem;
+  line-height: 1.65;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 1.1fr 0.9fr;
+}
+
+.citations {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.citations li {
+  margin-bottom: 14px;
+}
+
+.citations span {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+pre {
+  background: #0f172a;
+  border-radius: 12px;
+  color: #dbeafe;
+  margin: 0;
+  overflow-x: auto;
+  padding: 16px;
+}
+
+@media (max-width: 760px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
