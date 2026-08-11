@@ -1,0 +1,5 @@
+{"id": "restricted-data-transfer", "question": "What should employees do before sending restricted data outside the company?", "expected_doc_ids": ["security-policy"], "answer_keywords": ["approved", "business purpose", "encryption", "security ticket"]}
+{"id": "incident-containment", "question": "What are common first actions during incident containment?", "expected_doc_ids": ["incident-response"], "answer_keywords": ["rotate credentials", "isolate hosts", "disable tokens", "preserve logs"]}
+{"id": "rag-citations", "question": "How should RAG answers handle policy or compliance questions?", "expected_doc_ids": ["model-governance"], "answer_keywords": ["cite", "sources", "evidence", "unsupported"]}
+{"id": "conference-travel", "question": "What should conference travel requests include?", "expected_doc_ids": ["expense-policy"], "answer_keywords": ["event name", "learning value", "estimated cost", "presenting"]}
+
