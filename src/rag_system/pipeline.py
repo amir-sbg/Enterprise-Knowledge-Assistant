@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from dataclasses import asdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 from rag_system.bm25 import BM25Index
@@ -14,6 +16,8 @@ from rag_system.retriever import HybridRetriever
 from rag_system.schema import Answer, Chunk
 from rag_system.tracking import CostModel, estimate_tokens, latency_timer
 from rag_system.vector_store import InMemoryVectorStore
+
+INDEX_MANIFEST = "manifest.json"
 
 
 class RAGPipeline:
@@ -83,6 +87,7 @@ def build_index(
     chunk_size: int = 140,
     overlap: int = 32,
 ) -> list[Chunk]:
+    index_path = Path(index_path)
     documents = load_documents(docs_path)
     chunks = TokenChunker(chunk_size=chunk_size, overlap=overlap).split(documents)
     embedding_model = HashEmbeddingModel()
@@ -94,7 +99,48 @@ def build_index(
 
     bm25 = BM25Index(chunks)
     bm25.save(index_path)
+    _write_manifest(index_path, docs_path, documents, chunks, chunk_size, overlap, embedding_model.dim)
     return chunks
+
+
+def read_index_manifest(index_path: str | Path) -> dict:
+    manifest_path = Path(index_path) / INDEX_MANIFEST
+    if not manifest_path.exists():
+        return {}
+    return json.loads(manifest_path.read_text(encoding="utf-8"))
+
+
+def index_is_complete(index_path: str | Path) -> bool:
+    path = Path(index_path)
+    return (
+        (path / "vector_store.pkl").exists()
+        and (path / "bm25.pkl").exists()
+        and (path / INDEX_MANIFEST).exists()
+    )
+
+
+def _write_manifest(
+    index_path: Path,
+    docs_path: str | Path,
+    documents: list,
+    chunks: list[Chunk],
+    chunk_size: int,
+    overlap: int,
+    embedding_dim: int,
+) -> None:
+    sources = sorted({str(doc.metadata.get("source", doc.id)) for doc in documents})
+    manifest = {
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "docs_path": str(docs_path),
+        "documents": len(documents),
+        "chunks": len(chunks),
+        "chunk_size": chunk_size,
+        "overlap": overlap,
+        "embedding_dim": embedding_dim,
+        "sources": sources,
+    }
+    index_path.mkdir(parents=True, exist_ok=True)
+    (index_path / INDEX_MANIFEST).write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
 
 def answer_to_dict(answer: Answer) -> dict:
@@ -138,4 +184,3 @@ def _answer_from_dict(payload: dict) -> Answer:
         retrieval=retrieval,
         metrics=payload.get("metrics", {}),
     )
-

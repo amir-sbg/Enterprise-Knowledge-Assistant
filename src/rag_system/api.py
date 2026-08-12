@@ -10,7 +10,13 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from rag_system.evaluation import evaluate_pipeline, load_eval_cases
-from rag_system.pipeline import RAGPipeline, answer_to_dict, build_index
+from rag_system.pipeline import (
+    RAGPipeline,
+    answer_to_dict,
+    build_index,
+    index_is_complete,
+    read_index_manifest,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -50,8 +56,8 @@ def home() -> FileResponse:
 def health() -> dict[str, Any]:
     return {
         "status": "ok",
-        "index_exists": (INDEX_PATH / "vector_store.pkl").exists()
-        and (INDEX_PATH / "bm25.pkl").exists(),
+        "index_exists": index_is_complete(INDEX_PATH),
+        "index": read_index_manifest(INDEX_PATH),
     }
 
 
@@ -87,6 +93,5 @@ def evaluate(request: EvalRequest) -> dict[str, Any]:
 
 
 def _ensure_index() -> None:
-    if not (INDEX_PATH / "vector_store.pkl").exists():
+    if not index_is_complete(INDEX_PATH):
         build_index("data/sample_docs", INDEX_PATH)
-

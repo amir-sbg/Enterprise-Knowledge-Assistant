@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from rag_system.evaluation import evaluate_pipeline, load_eval_cases
-from rag_system.pipeline import RAGPipeline, answer_to_dict, build_index
+from rag_system.pipeline import RAGPipeline, answer_to_dict, build_index, read_index_manifest
 
 
 def main() -> None:
@@ -31,6 +31,9 @@ def main() -> None:
     evaluate.add_argument("--top-k", type=int, default=5)
     evaluate.add_argument("--output", default="")
 
+    status = subcommands.add_parser("status", help="Show index metadata")
+    status.add_argument("--index", default="indexes/demo")
+
     args = parser.parse_args()
     if args.command == "ingest":
         chunks = build_index(args.docs, args.index, chunk_size=args.chunk_size, overlap=args.overlap)
@@ -51,6 +54,8 @@ def main() -> None:
             Path(args.output).parent.mkdir(parents=True, exist_ok=True)
             Path(args.output).write_text(json.dumps(report, indent=2), encoding="utf-8")
         print(json.dumps(report["summary"], indent=2))
+    elif args.command == "status":
+        print(json.dumps(read_index_manifest(args.index), indent=2))
 
 
 def _parse_filters(items: list[str]) -> dict[str, str]:
@@ -65,4 +70,3 @@ def _parse_filters(items: list[str]) -> dict[str, str]:
 
 if __name__ == "__main__":
     main()
-
