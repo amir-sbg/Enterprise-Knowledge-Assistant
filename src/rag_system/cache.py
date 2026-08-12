@@ -36,9 +36,13 @@ class JsonQueryCache:
     def _load(self) -> dict[str, Any]:
         if not self.path.exists():
             return {}
-        return json.loads(self.path.read_text(encoding="utf-8"))
+        try:
+            return json.loads(self.path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            backup = self.path.with_suffix(f"{self.path.suffix}.bad")
+            self.path.replace(backup)
+            return {}
 
     def _key(self, key_parts: dict[str, Any]) -> str:
         blob = json.dumps(key_parts, sort_keys=True)
         return hashlib.sha256(blob.encode("utf-8")).hexdigest()
-
