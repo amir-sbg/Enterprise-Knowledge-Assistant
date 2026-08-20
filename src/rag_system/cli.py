@@ -64,7 +64,10 @@ def _parse_filters(items: list[str]) -> dict[str, str]:
         if "=" not in item:
             raise ValueError(f"invalid filter {item!r}; expected key=value")
         key, value = item.split("=", 1)
-        filters[key] = value
+        key = key.strip()
+        if not key:
+            raise ValueError(f"invalid filter {item!r}; filter key cannot be empty")
+        filters[key] = value.strip()
     return filters
 
 

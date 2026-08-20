@@ -52,3 +52,30 @@ def test_metadata_filter_excludes_other_departments():
     )
 
     assert all(item.chunk.metadata["department"] == "security" for item in results)
+
+
+def test_metadata_filters_ignore_case_and_padding():
+    docs = [
+        Document(
+            id="ops",
+            text="on call handoffs must include open incidents and owners",
+            metadata={"department": "Operations"},
+        ),
+        Document(
+            id="finance",
+            text="travel requests include the conference budget",
+            metadata={"department": "Finance"},
+        ),
+    ]
+    chunks = TokenChunker(chunk_size=30, overlap=4).split(docs)
+    model = HashEmbeddingModel(dim=128)
+    store = InMemoryVectorStore()
+    store.add(chunks, model.embed([chunk.text for chunk in chunks]))
+
+    results = HybridRetriever(store, BM25Index(chunks), embedding_model=model).retrieve(
+        "handoff incidents",
+        filters={"department": " operations "},
+    )
+
+    assert results
+    assert {item.chunk.document_id for item in results} == {"ops"}

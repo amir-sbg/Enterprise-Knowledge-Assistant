@@ -30,7 +30,7 @@ class InMemoryVectorStore:
         top_k: int = 8,
         filters: dict[str, str] | None = None,
     ) -> list[RetrievedChunk]:
-        filters = filters or {}
+        filters = normalize_filters(filters)
         scores = cosine_similarity(self.vectors, query_vector)
         candidates: list[RetrievedChunk] = []
         for idx, score in enumerate(scores.tolist()):
@@ -59,9 +59,24 @@ class InMemoryVectorStore:
         return cls(chunks=payload["chunks"], vectors=payload["vectors"])
 
 
-def _metadata_matches(metadata: dict[str, object], filters: dict[str, str]) -> bool:
-    for key, value in filters.items():
-        if str(metadata.get(key)) != str(value):
+def normalize_filters(filters: dict[str, object] | None) -> dict[str, str]:
+    normalized: dict[str, str] = {}
+    for key, value in (filters or {}).items():
+        clean_key = str(key).strip()
+        if not clean_key:
+            continue
+        normalized[clean_key] = _normalize_filter_value(value)
+    return normalized
+
+
+def _metadata_matches(metadata: dict[str, object], filters: dict[str, object]) -> bool:
+    for key, value in normalize_filters(filters).items():
+        if key not in metadata:
+            return False
+        if _normalize_filter_value(metadata[key]) != value:
             return False
     return True
 
+
+def _normalize_filter_value(value: object) -> str:
+    return str(value).strip().casefold()
