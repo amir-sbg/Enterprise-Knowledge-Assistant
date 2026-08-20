@@ -162,6 +162,32 @@ def answer_to_dict(answer: Answer) -> dict:
     }
 
 
+def retrieval_trace(answer: Answer, preview_tokens: int = 28) -> list[dict]:
+    trace = []
+    for rank, item in enumerate(answer.retrieval, start=1):
+        trace.append(
+            {
+                "rank": rank,
+                "chunk_id": item.chunk.id,
+                "document_id": item.chunk.document_id,
+                "source": item.chunk.metadata.get("source", item.chunk.document_id),
+                "score": round(item.score, 6),
+                "semantic_score": round(item.semantic_score, 6),
+                "bm25_score": round(item.bm25_score, 6),
+                "rerank_score": round(item.rerank_score, 6),
+                "preview": _preview(item.chunk.text, preview_tokens),
+            }
+        )
+    return trace
+
+
+def _preview(text: str, token_limit: int) -> str:
+    tokens = text.split()
+    if len(tokens) <= token_limit:
+        return " ".join(tokens)
+    return " ".join(tokens[:token_limit]) + " ..."
+
+
 def _answer_from_dict(payload: dict) -> Answer:
     from rag_system.schema import Citation, RetrievedChunk
 

@@ -1,7 +1,13 @@
 from pathlib import Path
 
 from rag_system.evaluation import evaluate_pipeline, load_eval_cases
-from rag_system.pipeline import RAGPipeline, build_index, index_is_complete, read_index_manifest
+from rag_system.pipeline import (
+    RAGPipeline,
+    build_index,
+    index_is_complete,
+    read_index_manifest,
+    retrieval_trace,
+)
 
 
 def test_pipeline_returns_cited_answer(tmp_path: Path):
@@ -42,3 +48,18 @@ def test_index_manifest_tracks_build_settings(tmp_path: Path):
     assert manifest["overlap"] == 10
     assert manifest["documents"] == 4
     assert manifest["chunks"] >= 4
+
+
+def test_retrieval_trace_summarizes_answer_evidence(tmp_path: Path):
+    index_path = tmp_path / "idx"
+    build_index("data/sample_docs", index_path)
+    pipeline = RAGPipeline.load(index_path)
+
+    answer = pipeline.ask("How are vendor security reviews handled?", top_k=2)
+    trace = retrieval_trace(answer, preview_tokens=8)
+
+    assert len(trace) == len(answer.retrieval)
+    assert trace[0]["rank"] == 1
+    assert trace[0]["document_id"]
+    assert "score" in trace[0]
+    assert len(trace[0]["preview"].split()) <= 9

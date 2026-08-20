@@ -5,7 +5,13 @@ import json
 from pathlib import Path
 
 from rag_system.evaluation import evaluate_pipeline, load_eval_cases
-from rag_system.pipeline import RAGPipeline, answer_to_dict, build_index, read_index_manifest
+from rag_system.pipeline import (
+    RAGPipeline,
+    answer_to_dict,
+    build_index,
+    read_index_manifest,
+    retrieval_trace,
+)
 
 
 def main() -> None:
@@ -24,6 +30,7 @@ def main() -> None:
     ask.add_argument("--top-k", type=int, default=5)
     ask.add_argument("--filter", action="append", default=[], help="metadata filter as key=value")
     ask.add_argument("--no-cache", action="store_true")
+    ask.add_argument("--trace", action="store_true", help="include retrieval score details")
 
     evaluate = subcommands.add_parser("evaluate", help="Run the evaluation suite")
     evaluate.add_argument("--eval-file", default="eval/queries.jsonl")
@@ -46,7 +53,10 @@ def main() -> None:
             filters=_parse_filters(args.filter),
             use_cache=not args.no_cache,
         )
-        print(json.dumps(answer_to_dict(answer), indent=2))
+        payload = answer_to_dict(answer)
+        if args.trace:
+            payload["retrieval_trace"] = retrieval_trace(answer)
+        print(json.dumps(payload, indent=2))
     elif args.command == "evaluate":
         pipeline = RAGPipeline.load(args.index)
         report = evaluate_pipeline(pipeline, load_eval_cases(args.eval_file), top_k=args.top_k)
