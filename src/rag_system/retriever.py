@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import OrderedDict
 
 from rag_system.bm25 import BM25Index
+from rag_system.diversity import diversify_results
 from rag_system.embeddings import HashEmbeddingModel
 from rag_system.query import QueryRewriter
 from rag_system.reranker import LightweightReranker
@@ -18,12 +19,16 @@ class HybridRetriever:
         embedding_model: HashEmbeddingModel | None = None,
         rewriter: QueryRewriter | None = None,
         reranker: LightweightReranker | None = None,
+        diversity_weight: float = 0.15,
     ) -> None:
         self.vector_store = vector_store
         self.bm25 = bm25
         self.embedding_model = embedding_model or HashEmbeddingModel()
         self.rewriter = rewriter or QueryRewriter()
         self.reranker = reranker or LightweightReranker()
+        if not 0.0 <= diversity_weight <= 1.0:
+            raise ValueError("diversity_weight must be between 0 and 1")
+        self.diversity_weight = diversity_weight
 
     def retrieve(
         self,
@@ -37,7 +42,16 @@ class HybridRetriever:
         semantic = self.vector_store.search(query_vector, top_k=candidate_k, filters=filters)
         lexical = self.bm25.search(rewritten, top_k=candidate_k, filters=filters)
         fused = self._merge(semantic, lexical)
-        return self.reranker.rerank(rewritten, fused, top_k=top_k)
+        reranked = self.reranker.rerank(
+            rewritten,
+            fused,
+            top_k=max(top_k * 3, top_k),
+        )
+        return diversify_results(
+            reranked,
+            top_k=top_k,
+            diversity_weight=self.diversity_weight,
+        )
 
     def _merge(
         self,
@@ -68,4 +82,3 @@ class HybridRetriever:
 
 def _rank_score(rank: int, k: int = 60) -> float:
     return 1.0 / (k + rank)
-

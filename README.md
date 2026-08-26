@@ -39,6 +39,7 @@ The retrieval path combines lexical and semantic evidence instead of relying on 
 - **Hash embeddings** provide deterministic semantic search for local development and CI.
 - **Hybrid fusion** merges BM25 and vector candidates before reranking.
 - **Reranking** prioritizes chunks that match the rewritten query and have source metadata.
+- **Context diversification** reduces repeated chunks after reranking so the answerer sees broader evidence.
 - **Citation verification** checks whether generated claims are supported by cited chunks.
 
 This keeps the project runnable on a laptop while still reflecting the same interfaces used with production embedding models, vector databases, and hosted LLMs.

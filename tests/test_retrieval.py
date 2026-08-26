@@ -1,8 +1,11 @@
+import pytest
+
 from rag_system.bm25 import BM25Index
 from rag_system.chunking import TokenChunker
+from rag_system.diversity import diversify_results
 from rag_system.embeddings import HashEmbeddingModel
 from rag_system.retriever import HybridRetriever
-from rag_system.schema import Document
+from rag_system.schema import Chunk, Document, RetrievedChunk
 from rag_system.vector_store import InMemoryVectorStore
 
 
@@ -79,3 +82,31 @@ def test_metadata_filters_ignore_case_and_padding():
 
     assert results
     assert {item.chunk.document_id for item in results} == {"ops"}
+
+
+def test_diversifier_reduces_repeated_context():
+    items = [
+        RetrievedChunk(
+            Chunk("a1", "security", "restricted data encryption approval ticket"),
+            score=0.90,
+        ),
+        RetrievedChunk(
+            Chunk("a2", "security", "restricted data encryption approval ticket"),
+            score=0.88,
+        ),
+        RetrievedChunk(
+            Chunk("b1", "governance", "model review drift monitoring escalation"),
+            score=0.70,
+        ),
+    ]
+
+    selected = diversify_results(items, top_k=2, diversity_weight=0.75)
+
+    assert [item.chunk.id for item in selected] == ["a1", "b1"]
+
+
+def test_diversifier_validates_settings():
+    with pytest.raises(ValueError, match="top_k"):
+        diversify_results([], top_k=0)
+    with pytest.raises(ValueError, match="diversity_weight"):
+        diversify_results([], top_k=1, diversity_weight=1.5)
