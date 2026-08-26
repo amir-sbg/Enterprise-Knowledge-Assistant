@@ -1,6 +1,11 @@
 from pathlib import Path
 
-from rag_system.evaluation import evaluate_pipeline, load_eval_cases
+from rag_system.evaluation import (
+    _context_precision_at_k,
+    _ndcg_at_k,
+    evaluate_pipeline,
+    load_eval_cases,
+)
 from rag_system.pipeline import (
     RAGPipeline,
     build_index,
@@ -33,8 +38,22 @@ def test_eval_suite_reports_retrieval_metrics(tmp_path: Path):
 
     assert report["summary"]["cases"] == 4
     assert report["summary"]["recall_at_k"] >= 0.75
+    assert "ndcg_at_k" in report["summary"]
+    assert "context_precision_at_k" in report["summary"]
     assert "hallucination_rate" in report["summary"]
     assert "cost_per_query_avg" in report["summary"]
+
+
+def test_ranking_metrics_discount_late_and_duplicate_hits():
+    expected = {"security", "governance"}
+
+    strong = _ndcg_at_k(["security", "governance", "security"], expected, top_k=3)
+    late = _ndcg_at_k(["travel", "security", "security"], expected, top_k=3)
+    precision = _context_precision_at_k(["travel", "security", "security"], expected, top_k=3)
+
+    assert strong == 1.0
+    assert late < strong
+    assert precision == 2 / 3
 
 
 def test_index_manifest_tracks_build_settings(tmp_path: Path):

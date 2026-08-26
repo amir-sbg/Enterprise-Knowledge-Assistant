@@ -95,6 +95,8 @@ The evaluation runner reports:
 
 - Retrieval Recall@K
 - MRR
+- nDCG@K
+- Context precision@K
 - Answer correctness
 - Faithfulness
 - Hallucination rate
