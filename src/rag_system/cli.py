@@ -4,7 +4,11 @@ import argparse
 import json
 from pathlib import Path
 
-from rag_system.evaluation import evaluate_pipeline, load_eval_cases
+from rag_system.evaluation import (
+    evaluate_pipeline,
+    evaluate_retrieval_modes,
+    load_eval_cases,
+)
 from rag_system.pipeline import (
     RAGPipeline,
     answer_to_dict,
@@ -37,6 +41,11 @@ def main() -> None:
     evaluate.add_argument("--index", default="indexes/demo")
     evaluate.add_argument("--top-k", type=int, default=5)
     evaluate.add_argument("--output", default="")
+    evaluate.add_argument(
+        "--retrieval-ablation-output",
+        default="",
+        help="optional JSON path for hybrid/semantic/BM25 retrieval comparison",
+    )
 
     status = subcommands.add_parser("status", help="Show index metadata")
     status.add_argument("--index", default="indexes/demo")
@@ -59,10 +68,18 @@ def main() -> None:
         print(json.dumps(payload, indent=2))
     elif args.command == "evaluate":
         pipeline = RAGPipeline.load(args.index)
-        report = evaluate_pipeline(pipeline, load_eval_cases(args.eval_file), top_k=args.top_k)
+        cases = load_eval_cases(args.eval_file)
+        report = evaluate_pipeline(pipeline, cases, top_k=args.top_k)
         if args.output:
             Path(args.output).parent.mkdir(parents=True, exist_ok=True)
             Path(args.output).write_text(json.dumps(report, indent=2), encoding="utf-8")
+        if args.retrieval_ablation_output:
+            ablation = evaluate_retrieval_modes(pipeline, cases, top_k=args.top_k)
+            Path(args.retrieval_ablation_output).parent.mkdir(parents=True, exist_ok=True)
+            Path(args.retrieval_ablation_output).write_text(
+                json.dumps(ablation, indent=2),
+                encoding="utf-8",
+            )
         print(json.dumps(report["summary"], indent=2))
     elif args.command == "status":
         print(json.dumps(read_index_manifest(args.index), indent=2))

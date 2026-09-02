@@ -25,6 +25,7 @@ The default implementation runs locally with deterministic embeddings and an ext
 - Citation-aware answer generation
 - Citation verification and faithfulness checks
 - Retrieval and answer evaluation suite
+- Retrieval-mode ablations for hybrid, semantic-only, and BM25-only search
 - Latency, token, and estimated cost tracking
 - Query-result caching
 - FastAPI backend
@@ -54,6 +55,15 @@ pip install -e ".[dev,api]"
 python -m rag_system.cli ingest --docs data/sample_docs --index indexes/demo
 python -m rag_system.cli ask "What should employees do before sending restricted data?"
 python -m rag_system.cli evaluate --eval-file eval/queries.jsonl --index indexes/demo
+```
+
+To compare retrieval modes without changing the answerer:
+
+```bash
+python -m rag_system.cli evaluate \
+  --eval-file eval/queries.jsonl \
+  --index indexes/demo \
+  --retrieval-ablation-output reports/retrieval_ablation.json
 ```
 
 Run the API:
@@ -102,6 +112,7 @@ The evaluation runner reports:
 - Faithfulness
 - Hallucination rate
 - Citation accuracy
+- Hybrid/semantic/BM25 retrieval ablations
 - Latency per query
 - Estimated token/cost per query
 

@@ -96,6 +96,85 @@ def evaluate_pipeline(
     }
 
 
+def evaluate_retrieval_modes(
+    pipeline: RAGPipeline,
+    cases: list[EvalCase],
+    top_k: int = 5,
+    modes: tuple[str, ...] = ("hybrid", "semantic", "bm25"),
+) -> dict[str, Any]:
+    rows = []
+    for mode in modes:
+        mode_rows = []
+        for case in cases:
+            retrieved = _retrieve_for_mode(pipeline, case, top_k=top_k, mode=mode)
+            retrieved_doc_ids = [item.chunk.document_id for item in retrieved[:top_k]]
+            expected = set(case.expected_doc_ids)
+            mode_rows.append(
+                {
+                    "id": case.id,
+                    "mode": mode,
+                    "retrieved_doc_ids": retrieved_doc_ids,
+                    "recall_at_k": int(bool(expected & set(retrieved_doc_ids))),
+                    "mrr": _reciprocal_rank(retrieved_doc_ids, expected),
+                    "ndcg_at_k": _ndcg_at_k(retrieved_doc_ids, expected, top_k=top_k),
+                    "context_precision_at_k": _context_precision_at_k(
+                        retrieved_doc_ids,
+                        expected,
+                        top_k=top_k,
+                    ),
+                }
+            )
+        rows.extend(mode_rows)
+
+    summary = []
+    for mode in modes:
+        mode_rows = [row for row in rows if row["mode"] == mode]
+        summary.append(
+            {
+                "mode": mode,
+                "cases": len(mode_rows),
+                "recall_at_k": round(mean([row["recall_at_k"] for row in mode_rows]), 4)
+                if mode_rows
+                else 0.0,
+                "mrr": round(mean([row["mrr"] for row in mode_rows]), 4)
+                if mode_rows
+                else 0.0,
+                "ndcg_at_k": round(mean([row["ndcg_at_k"] for row in mode_rows]), 4)
+                if mode_rows
+                else 0.0,
+                "context_precision_at_k": round(
+                    mean([row["context_precision_at_k"] for row in mode_rows]),
+                    4,
+                )
+                if mode_rows
+                else 0.0,
+            }
+        )
+    return {"summary": summary, "rows": rows}
+
+
+def _retrieve_for_mode(
+    pipeline: RAGPipeline,
+    case: EvalCase,
+    top_k: int,
+    mode: str,
+):
+    retriever = pipeline.retriever
+    rewritten = retriever.rewriter.rewrite(case.question)
+    if mode == "hybrid":
+        return retriever.retrieve(case.question, top_k=top_k, filters=case.filters)
+    if mode == "semantic":
+        query_vector = retriever.embedding_model.embed_query(rewritten)
+        return retriever.vector_store.search(
+            query_vector,
+            top_k=top_k,
+            filters=case.filters,
+        )
+    if mode in {"bm25", "lexical"}:
+        return retriever.bm25.search(rewritten, top_k=top_k, filters=case.filters)
+    raise ValueError(f"unknown retrieval mode: {mode}")
+
+
 def _reciprocal_rank(retrieved_doc_ids: list[str], expected: set[str]) -> float:
     for idx, doc_id in enumerate(retrieved_doc_ids, start=1):
         if doc_id in expected:

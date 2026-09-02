@@ -4,6 +4,7 @@ from rag_system.evaluation import (
     _context_precision_at_k,
     _ndcg_at_k,
     evaluate_pipeline,
+    evaluate_retrieval_modes,
     load_eval_cases,
 )
 from rag_system.pipeline import (
@@ -42,6 +43,19 @@ def test_eval_suite_reports_retrieval_metrics(tmp_path: Path):
     assert "context_precision_at_k" in report["summary"]
     assert "hallucination_rate" in report["summary"]
     assert "cost_per_query_avg" in report["summary"]
+
+
+def test_retrieval_ablation_compares_search_modes(tmp_path: Path):
+    index_path = tmp_path / "idx"
+    build_index("data/sample_docs", index_path)
+    pipeline = RAGPipeline.load(index_path)
+    cases = load_eval_cases("eval/queries.jsonl")
+
+    report = evaluate_retrieval_modes(pipeline, cases, top_k=3)
+
+    assert {row["mode"] for row in report["summary"]} == {"hybrid", "semantic", "bm25"}
+    assert len(report["rows"]) == 12
+    assert all("context_precision_at_k" in row for row in report["summary"])
 
 
 def test_ranking_metrics_discount_late_and_duplicate_hits():
