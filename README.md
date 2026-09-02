@@ -16,6 +16,7 @@ The default implementation runs locally with deterministic embeddings and an ext
 
 - Document parsing for Markdown, text, and JSONL records
 - Token-aware chunking with overlap
+- Index manifests with source counts and metadata facets
 - Deterministic embedding model for reproducible local retrieval
 - In-memory vector index with cosine search
 - BM25 lexical retrieval
@@ -43,6 +44,7 @@ The retrieval path combines lexical and semantic evidence instead of relying on 
 - **Reranking** prioritizes chunks that match the rewritten query and have source metadata.
 - **Context diversification** reduces repeated chunks after reranking so the answerer sees broader evidence.
 - **Citation verification** checks whether generated claims are supported by cited chunks.
+- **Index manifests** expose source files and metadata facets so filters can be checked before evaluation.
 
 This keeps the project runnable on a laptop while still reflecting the same interfaces used with production embedding models, vector databases, and hosted LLMs.
 

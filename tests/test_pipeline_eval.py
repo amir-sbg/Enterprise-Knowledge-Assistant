@@ -11,6 +11,7 @@ from rag_system.pipeline import (
     RAGPipeline,
     build_index,
     index_is_complete,
+    metadata_facets,
     read_index_manifest,
     retrieval_coverage_metrics,
     retrieval_trace,
@@ -85,6 +86,8 @@ def test_index_manifest_tracks_build_settings(tmp_path: Path):
     assert manifest["overlap"] == 10
     assert manifest["documents"] == 4
     assert manifest["chunks"] >= 4
+    assert manifest["metadata_facets"]["department"]["security"] >= 1
+    assert manifest["metadata_facets"]["sensitivity"]["internal"] >= 1
 
 
 def test_retrieval_trace_summarizes_answer_evidence(tmp_path: Path):
@@ -114,3 +117,13 @@ def test_retrieval_coverage_metrics_track_duplicate_context() -> None:
     assert metrics["retrieved_chunks"] == 3
     assert metrics["unique_retrieved_documents"] == 2
     assert metrics["duplicate_document_rate"] == 0.3333
+
+
+def test_metadata_facets_counts_chunk_metadata() -> None:
+    chunks = [
+        Chunk("a", "security", "restricted data", metadata={"department": "security"}),
+        Chunk("b", "security", "encryption", metadata={"department": "security"}),
+        Chunk("c", "finance", "travel", metadata={"department": "finance"}),
+    ]
+
+    assert metadata_facets(chunks)["department"] == {"finance": 1, "security": 2}

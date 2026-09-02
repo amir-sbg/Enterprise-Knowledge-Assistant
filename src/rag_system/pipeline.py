@@ -139,6 +139,7 @@ def _write_manifest(
         "overlap": overlap,
         "embedding_dim": embedding_dim,
         "sources": sources,
+        "metadata_facets": metadata_facets(chunks),
     }
     index_path.mkdir(parents=True, exist_ok=True)
     (index_path / INDEX_MANIFEST).write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -204,6 +205,22 @@ def retrieval_coverage_metrics(retrieved: list[RetrievedChunk]) -> dict[str, flo
         "top_retrieval_score": round(max(scores), 6),
         "mean_retrieval_score": round(sum(scores) / len(scores), 6),
     }
+
+
+def metadata_facets(chunks: list[Chunk], keys: tuple[str, ...] = ("department", "sensitivity", "file_type")) -> dict:
+    facets: dict[str, dict[str, int]] = {}
+    for key in keys:
+        counts: dict[str, int] = {}
+        for chunk in chunks:
+            if key not in chunk.metadata:
+                continue
+            value = str(chunk.metadata[key]).strip()
+            if not value:
+                continue
+            counts[value] = counts.get(value, 0) + 1
+        if counts:
+            facets[key] = dict(sorted(counts.items()))
+    return facets
 
 
 def _preview(text: str, token_limit: int) -> str:
