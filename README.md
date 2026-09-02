@@ -26,6 +26,7 @@ The default implementation runs locally with deterministic embeddings and an ext
 - Citation verification and faithfulness checks
 - Retrieval and answer evaluation suite
 - Retrieval-mode ablations for hybrid, semantic-only, and BM25-only search
+- Retrieval coverage metrics for duplicate context and source diversity
 - Latency, token, and estimated cost tracking
 - Query-result caching
 - FastAPI backend
@@ -113,6 +114,7 @@ The evaluation runner reports:
 - Hallucination rate
 - Citation accuracy
 - Hybrid/semantic/BM25 retrieval ablations
+- Source coverage and duplicate-context rate
 - Latency per query
 - Estimated token/cost per query
 

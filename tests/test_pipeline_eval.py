@@ -12,8 +12,10 @@ from rag_system.pipeline import (
     build_index,
     index_is_complete,
     read_index_manifest,
+    retrieval_coverage_metrics,
     retrieval_trace,
 )
+from rag_system.schema import Chunk, RetrievedChunk
 
 
 def test_pipeline_returns_cited_answer(tmp_path: Path):
@@ -28,6 +30,8 @@ def test_pipeline_returns_cited_answer(tmp_path: Path):
     assert answer.citations[0].document_id == "security-policy"
     assert answer.metrics["citation_accuracy"] > 0
     assert answer.metrics["latency_ms"] >= 0
+    assert answer.metrics["retrieved_chunks"] == 3
+    assert answer.metrics["unique_retrieved_documents"] >= 1
 
 
 def test_eval_suite_reports_retrieval_metrics(tmp_path: Path):
@@ -96,3 +100,17 @@ def test_retrieval_trace_summarizes_answer_evidence(tmp_path: Path):
     assert trace[0]["document_id"]
     assert "score" in trace[0]
     assert len(trace[0]["preview"].split()) <= 9
+
+
+def test_retrieval_coverage_metrics_track_duplicate_context() -> None:
+    retrieved = [
+        RetrievedChunk(Chunk("a", "security", "restricted data"), score=0.7),
+        RetrievedChunk(Chunk("b", "security", "encryption approval"), score=0.5),
+        RetrievedChunk(Chunk("c", "governance", "model review"), score=0.3),
+    ]
+
+    metrics = retrieval_coverage_metrics(retrieved)
+
+    assert metrics["retrieved_chunks"] == 3
+    assert metrics["unique_retrieved_documents"] == 2
+    assert metrics["duplicate_document_rate"] == 0.3333

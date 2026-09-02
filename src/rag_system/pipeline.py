@@ -65,6 +65,7 @@ class RAGPipeline:
             "citation_accuracy": round(report.citation_accuracy, 4),
             "faithfulness": round(report.faithfulness, 4),
             "unsupported_claims": report.unsupported_claims,
+            **retrieval_coverage_metrics(retrieved),
         }
 
         if self.cache and use_cache:
@@ -179,6 +180,30 @@ def retrieval_trace(answer: Answer, preview_tokens: int = 28) -> list[dict]:
             }
         )
     return trace
+
+
+def retrieval_coverage_metrics(retrieved: list[RetrievedChunk]) -> dict[str, float | int]:
+    if not retrieved:
+        return {
+            "retrieved_chunks": 0,
+            "unique_retrieved_documents": 0,
+            "retrieval_source_coverage": 0.0,
+            "duplicate_document_rate": 0.0,
+            "top_retrieval_score": 0.0,
+            "mean_retrieval_score": 0.0,
+        }
+
+    document_ids = [item.chunk.document_id for item in retrieved]
+    unique_documents = len(set(document_ids))
+    scores = [float(item.score) for item in retrieved]
+    return {
+        "retrieved_chunks": len(retrieved),
+        "unique_retrieved_documents": unique_documents,
+        "retrieval_source_coverage": round(unique_documents / len(retrieved), 4),
+        "duplicate_document_rate": round(1.0 - unique_documents / len(retrieved), 4),
+        "top_retrieval_score": round(max(scores), 6),
+        "mean_retrieval_score": round(sum(scores) / len(scores), 6),
+    }
 
 
 def _preview(text: str, token_limit: int) -> str:
