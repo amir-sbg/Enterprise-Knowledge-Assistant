@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from rag_system.evaluation import (
     _context_precision_at_k,
     _ndcg_at_k,
@@ -33,6 +35,32 @@ def test_pipeline_returns_cited_answer(tmp_path: Path):
     assert answer.metrics["latency_ms"] >= 0
     assert answer.metrics["retrieved_chunks"] == 3
     assert answer.metrics["unique_retrieved_documents"] >= 1
+
+
+def test_pipeline_can_abstain_below_score_floor(tmp_path: Path):
+    index_path = tmp_path / "idx"
+    build_index("data/sample_docs", index_path)
+    pipeline = RAGPipeline.load(index_path)
+
+    answer = pipeline.ask(
+        "What should employees do before sending restricted data?",
+        top_k=3,
+        score_floor=1.0,
+    )
+
+    assert "could not find enough evidence" in answer.text.lower()
+    assert answer.metrics["retrieved_chunks"] == 0
+    assert answer.metrics["low_evidence_answer"] == 1
+    assert answer.metrics["retrieval_score_floor"] == 1.0
+
+
+def test_pipeline_rejects_negative_score_floor(tmp_path: Path):
+    index_path = tmp_path / "idx"
+    build_index("data/sample_docs", index_path)
+    pipeline = RAGPipeline.load(index_path)
+
+    with pytest.raises(ValueError, match="score_floor"):
+        pipeline.ask("hello", score_floor=-0.1)
 
 
 def test_eval_suite_reports_retrieval_metrics(tmp_path: Path):

@@ -41,10 +41,18 @@ class RAGPipeline:
         question: str,
         top_k: int = 5,
         filters: dict[str, str] | None = None,
+        score_floor: float | None = None,
         use_cache: bool = True,
     ) -> Answer:
+        if score_floor is not None and score_floor < 0:
+            raise ValueError("score_floor must not be negative")
         filters = filters or {}
-        cache_key = {"question": question, "top_k": top_k, "filters": filters}
+        cache_key = {
+            "question": question,
+            "top_k": top_k,
+            "filters": filters,
+            "score_floor": score_floor,
+        }
         if self.cache and use_cache:
             cached = self.cache.get(cache_key)
             if cached:
@@ -52,6 +60,8 @@ class RAGPipeline:
 
         with latency_timer() as timing:
             retrieved = self.retriever.retrieve(question, top_k=top_k, filters=filters)
+            if score_floor is not None:
+                retrieved = [item for item in retrieved if item.score >= score_floor]
             answer = self.answerer.answer(question, retrieved)
             report = self.verifier.verify(answer)
 
@@ -65,6 +75,8 @@ class RAGPipeline:
             "citation_accuracy": round(report.citation_accuracy, 4),
             "faithfulness": round(report.faithfulness, 4),
             "unsupported_claims": report.unsupported_claims,
+            "retrieval_score_floor": score_floor,
+            "low_evidence_answer": int(score_floor is not None and not retrieved),
             **retrieval_coverage_metrics(retrieved),
         }
 

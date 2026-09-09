@@ -33,6 +33,7 @@ def main() -> None:
     ask.add_argument("--index", default="indexes/demo")
     ask.add_argument("--top-k", type=int, default=5)
     ask.add_argument("--filter", action="append", default=[], help="metadata filter as key=value")
+    ask.add_argument("--score-floor", type=float)
     ask.add_argument("--no-cache", action="store_true")
     ask.add_argument("--trace", action="store_true", help="include retrieval score details")
 
@@ -60,6 +61,7 @@ def main() -> None:
             args.question,
             top_k=args.top_k,
             filters=_parse_filters(args.filter),
+            score_floor=args.score_floor,
             use_cache=not args.no_cache,
         )
         payload = answer_to_dict(answer)
