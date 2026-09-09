@@ -84,6 +84,45 @@ def test_metadata_filters_ignore_case_and_padding():
     assert {item.chunk.document_id for item in results} == {"ops"}
 
 
+def test_retriever_can_weight_lexical_matches_more_heavily():
+    docs = [
+        Document(id="semantic", text="people operations onboarding transfer request"),
+        Document(id="exact", text="pii pii encryption ticket approval"),
+    ]
+    chunks = TokenChunker(chunk_size=30, overlap=4).split(docs)
+    model = HashEmbeddingModel(dim=128)
+    store = InMemoryVectorStore()
+    store.add(chunks, model.embed([chunk.text for chunk in chunks]))
+
+    results = HybridRetriever(
+        store,
+        BM25Index(chunks),
+        embedding_model=model,
+        semantic_weight=0.0,
+        bm25_weight=2.0,
+    ).retrieve("pii encryption", top_k=2)
+
+    assert results[0].chunk.document_id == "exact"
+    assert results[0].score > 0
+
+
+def test_retriever_validates_fusion_weights():
+    retriever = _retriever()
+    with pytest.raises(ValueError, match="weights"):
+        HybridRetriever(
+            retriever.vector_store,
+            retriever.bm25,
+            semantic_weight=-0.1,
+        )
+    with pytest.raises(ValueError, match="retrieval weight"):
+        HybridRetriever(
+            retriever.vector_store,
+            retriever.bm25,
+            semantic_weight=0.0,
+            bm25_weight=0.0,
+        )
+
+
 def test_diversifier_reduces_repeated_context():
     items = [
         RetrievedChunk(

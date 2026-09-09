@@ -20,6 +20,8 @@ class HybridRetriever:
         rewriter: QueryRewriter | None = None,
         reranker: LightweightReranker | None = None,
         diversity_weight: float = 0.15,
+        semantic_weight: float = 1.0,
+        bm25_weight: float = 1.0,
     ) -> None:
         self.vector_store = vector_store
         self.bm25 = bm25
@@ -28,7 +30,13 @@ class HybridRetriever:
         self.reranker = reranker or LightweightReranker()
         if not 0.0 <= diversity_weight <= 1.0:
             raise ValueError("diversity_weight must be between 0 and 1")
+        if semantic_weight < 0 or bm25_weight < 0:
+            raise ValueError("retrieval weights must not be negative")
+        if semantic_weight + bm25_weight == 0:
+            raise ValueError("at least one retrieval weight must be positive")
         self.diversity_weight = diversity_weight
+        self.semantic_weight = semantic_weight
+        self.bm25_weight = bm25_weight
 
     def retrieve(
         self,
@@ -63,7 +71,7 @@ class HybridRetriever:
         for rank, item in enumerate(semantic, start=1):
             key = item.chunk.id
             item.semantic_score = _rank_score(rank)
-            item.score = item.semantic_score
+            item.score = item.semantic_score * self.semantic_weight
             merged[key] = item
 
         for rank, item in enumerate(lexical, start=1):
@@ -71,10 +79,10 @@ class HybridRetriever:
             bm25_score = _rank_score(rank)
             if key in merged:
                 merged[key].bm25_score = bm25_score
-                merged[key].score += bm25_score
+                merged[key].score += bm25_score * self.bm25_weight
             else:
                 item.bm25_score = bm25_score
-                item.score = bm25_score
+                item.score = bm25_score * self.bm25_weight
                 merged[key] = item
 
         return list(merged.values())
