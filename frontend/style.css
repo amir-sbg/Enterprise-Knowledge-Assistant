@@ -80,6 +80,29 @@ textarea {
   width: 100%;
 }
 
+.settings {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.settings label {
+  color: var(--muted);
+  font-size: 0.86rem;
+  margin: 0;
+}
+
+input {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: block;
+  font: inherit;
+  margin-top: 6px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
 .controls {
   display: flex;
   gap: 10px;
@@ -139,8 +162,8 @@ pre {
 }
 
 @media (max-width: 760px) {
+  .settings,
   .grid {
     grid-template-columns: 1fr;
   }
 }
-

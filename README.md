@@ -20,10 +20,11 @@ The default implementation runs locally with deterministic embeddings and an ext
 - Deterministic embedding model for reproducible local retrieval
 - In-memory vector index with cosine search
 - BM25 lexical retrieval
-- Hybrid retrieval with metadata filters
+- Hybrid retrieval with metadata filters and tunable semantic/BM25 fusion weights
 - Lightweight reranker
 - Query rewriting
 - Citation-aware answer generation
+- Low-evidence abstention with a configurable retrieval score floor
 - Citation verification and faithfulness checks
 - Retrieval and answer evaluation suite
 - Retrieval-mode ablations for hybrid, semantic-only, and BM25-only search
@@ -67,6 +68,15 @@ python -m rag_system.cli evaluate \
   --eval-file eval/queries.jsonl \
   --index indexes/demo \
   --retrieval-ablation-output reports/retrieval_ablation.json
+```
+
+When testing stricter answer behavior, add a score floor so the pipeline abstains if all retrieved chunks are too weak:
+
+```bash
+python -m rag_system.cli ask \
+  "What approvals are needed for restricted data?" \
+  --score-floor 0.03 \
+  --trace
 ```
 
 Run the API:
