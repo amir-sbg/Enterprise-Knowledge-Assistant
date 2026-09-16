@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -9,6 +11,8 @@ from typing import Any
 
 class JsonQueryCache:
     def __init__(self, path: str | Path = "cache/query_cache.json", ttl_seconds: int = 3600) -> None:
+        if ttl_seconds < 1:
+            raise ValueError("ttl_seconds must be positive")
         self.path = Path(path)
         self.ttl_seconds = ttl_seconds
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -19,7 +23,11 @@ class JsonQueryCache:
         item = self._items.get(key)
         if not item:
             return None
-        if time.time() - item["created_at"] > self.ttl_seconds:
+        if not isinstance(item, dict) or "created_at" not in item or "value" not in item:
+            self._items.pop(key, None)
+            self.flush()
+            return None
+        if time.time() - float(item["created_at"]) > self.ttl_seconds:
             self._items.pop(key, None)
             self.flush()
             return None
@@ -31,7 +39,25 @@ class JsonQueryCache:
         self.flush()
 
     def flush(self) -> None:
-        self.path.write_text(json.dumps(self._items, indent=2, sort_keys=True), encoding="utf-8")
+        payload = json.dumps(self._items, indent=2, sort_keys=True)
+        temporary_path: str | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=self.path.parent,
+                prefix=f".{self.path.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as handle:
+                temporary_path = handle.name
+                handle.write(payload)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary_path, self.path)
+        finally:
+            if temporary_path and os.path.exists(temporary_path):
+                os.unlink(temporary_path)
 
     def _load(self) -> dict[str, Any]:
         if not self.path.exists():
