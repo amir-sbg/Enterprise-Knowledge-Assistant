@@ -15,14 +15,21 @@ class InMemoryVectorStore:
         self.vectors = vectors if vectors is not None else np.zeros((0, 384), dtype=np.float32)
 
     def add(self, chunks: list[Chunk], vectors: np.ndarray) -> None:
+        vectors = np.asarray(vectors, dtype=np.float32)
         if len(chunks) != len(vectors):
             raise ValueError("chunk and vector counts do not match")
+        if vectors.ndim != 2:
+            raise ValueError("vectors must be a 2-D array")
+        if not np.isfinite(vectors).all():
+            raise ValueError("vectors must contain only finite values")
         if not self.chunks:
             self.chunks = list(chunks)
-            self.vectors = vectors.astype(np.float32)
+            self.vectors = vectors
             return
+        if vectors.shape[1] != self.vectors.shape[1]:
+            raise ValueError("new vectors must match the store embedding dimension")
         self.chunks.extend(chunks)
-        self.vectors = np.vstack([self.vectors, vectors.astype(np.float32)])
+        self.vectors = np.vstack([self.vectors, vectors])
 
     def search(
         self,
@@ -30,6 +37,8 @@ class InMemoryVectorStore:
         top_k: int = 8,
         filters: dict[str, str] | None = None,
     ) -> list[RetrievedChunk]:
+        if top_k < 1:
+            raise ValueError("top_k must be positive")
         filters = normalize_filters(filters)
         scores = cosine_similarity(self.vectors, query_vector)
         candidates: list[RetrievedChunk] = []

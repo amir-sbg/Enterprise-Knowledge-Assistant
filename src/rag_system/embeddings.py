@@ -12,6 +12,8 @@ class HashEmbeddingModel:
     """Small deterministic embedding model for local testing and demos."""
 
     def __init__(self, dim: int = 384) -> None:
+        if dim < 1:
+            raise ValueError("embedding dimension must be positive")
         self.dim = dim
 
     def embed(self, texts: list[str]) -> np.ndarray:
@@ -40,6 +42,14 @@ class HashEmbeddingModel:
 
 
 def cosine_similarity(matrix: np.ndarray, query: np.ndarray) -> np.ndarray:
+    matrix = np.asarray(matrix, dtype=np.float32)
+    query = np.asarray(query, dtype=np.float32)
+    if matrix.ndim != 2 or query.ndim != 1:
+        raise ValueError("matrix must be 2-D and query must be 1-D")
+    if matrix.shape[1] != query.shape[0]:
+        raise ValueError("matrix and query dimensions must match")
+    if not np.isfinite(matrix).all() or not np.isfinite(query).all():
+        raise ValueError("embeddings must contain only finite values")
     if matrix.size == 0:
         return np.array([], dtype=np.float32)
     query_norm = np.linalg.norm(query)
@@ -55,4 +65,3 @@ def softmax(scores: list[float]) -> list[float]:
     exps = [math.exp(score - peak) for score in scores]
     denom = sum(exps) or 1.0
     return [value / denom for value in exps]
-
