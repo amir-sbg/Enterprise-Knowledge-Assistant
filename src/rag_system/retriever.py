@@ -45,6 +45,12 @@ class HybridRetriever:
         candidate_k: int = 16,
         filters: dict[str, str] | None = None,
     ) -> list[RetrievedChunk]:
+        if not query or not query.strip():
+            raise ValueError("query must not be empty")
+        if top_k < 1 or candidate_k < 1:
+            raise ValueError("top_k and candidate_k must be positive")
+        if candidate_k < top_k:
+            raise ValueError("candidate_k must be at least top_k")
         rewritten = self.rewriter.rewrite(query)
         query_vector = self.embedding_model.embed_query(rewritten)
         semantic = self.vector_store.search(query_vector, top_k=candidate_k, filters=filters)

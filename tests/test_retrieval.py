@@ -123,6 +123,17 @@ def test_retriever_validates_fusion_weights():
         )
 
 
+def test_retriever_validates_query_and_candidate_budget():
+    retriever = _retriever()
+
+    with pytest.raises(ValueError, match="query"):
+        retriever.retrieve("  ")
+    with pytest.raises(ValueError, match="positive"):
+        retriever.retrieve("security", top_k=0)
+    with pytest.raises(ValueError, match="candidate_k"):
+        retriever.retrieve("security", top_k=3, candidate_k=2)
+
+
 def test_diversifier_reduces_repeated_context():
     items = [
         RetrievedChunk(
