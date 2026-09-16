@@ -44,8 +44,13 @@ class RAGPipeline:
         score_floor: float | None = None,
         use_cache: bool = True,
     ) -> Answer:
+        if not question or not question.strip():
+            raise ValueError("question must not be empty")
+        if top_k < 1:
+            raise ValueError("top_k must be positive")
         if score_floor is not None and score_floor < 0:
             raise ValueError("score_floor must not be negative")
+        question = " ".join(question.split())
         filters = filters or {}
         cache_key = {
             "question": question,
@@ -56,7 +61,9 @@ class RAGPipeline:
         if self.cache and use_cache:
             cached = self.cache.get(cache_key)
             if cached:
-                return _answer_from_dict(cached)
+                answer = _answer_from_dict(cached)
+                answer.metrics = {**answer.metrics, "cache_hit": 1}
+                return answer
 
         with latency_timer() as timing:
             retrieved = self.retriever.retrieve(question, top_k=top_k, filters=filters)
@@ -77,6 +84,7 @@ class RAGPipeline:
             "unsupported_claims": report.unsupported_claims,
             "retrieval_score_floor": score_floor,
             "low_evidence_answer": int(score_floor is not None and not retrieved),
+            "cache_hit": 0,
             **retrieval_coverage_metrics(retrieved),
         }
 

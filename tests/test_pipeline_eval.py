@@ -63,6 +63,29 @@ def test_pipeline_rejects_negative_score_floor(tmp_path: Path):
         pipeline.ask("hello", score_floor=-0.1)
 
 
+def test_pipeline_normalizes_questions_and_reports_cache_hits(tmp_path: Path):
+    index_path = tmp_path / "idx"
+    cache_path = tmp_path / "cache.json"
+    build_index("data/sample_docs", index_path)
+    pipeline = RAGPipeline.load(index_path, cache_path=cache_path)
+
+    first = pipeline.ask("  What is SSO?  ", top_k=2)
+    second = pipeline.ask("What   is SSO?", top_k=2)
+
+    assert first.metrics["cache_hit"] == 0
+    assert second.metrics["cache_hit"] == 1
+    assert second.text == first.text
+
+
+def test_pipeline_rejects_empty_question(tmp_path: Path):
+    index_path = tmp_path / "idx"
+    build_index("data/sample_docs", index_path)
+    pipeline = RAGPipeline.load(index_path)
+
+    with pytest.raises(ValueError, match="question"):
+        pipeline.ask(" ")
+
+
 def test_eval_suite_reports_retrieval_metrics(tmp_path: Path):
     index_path = tmp_path / "idx"
     build_index("data/sample_docs", index_path)
