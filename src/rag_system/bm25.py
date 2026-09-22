@@ -45,6 +45,10 @@ class BM25Index:
         top_k: int = 8,
         filters: dict[str, str] | None = None,
     ) -> list[RetrievedChunk]:
+        if not query or not query.strip():
+            raise ValueError("query must not be empty")
+        if top_k < 1:
+            raise ValueError("top_k must be positive")
         filters = filters or {}
         query_terms = tokenize(query)
         scored: list[RetrievedChunk] = []
@@ -82,4 +86,3 @@ class BM25Index:
     def load(cls, path: str | Path) -> "BM25Index":
         with (Path(path) / "bm25.pkl").open("rb") as f:
             return pickle.load(f)
-

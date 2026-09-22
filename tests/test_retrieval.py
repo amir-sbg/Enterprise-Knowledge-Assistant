@@ -134,6 +134,15 @@ def test_retriever_validates_query_and_candidate_budget():
         retriever.retrieve("security", top_k=3, candidate_k=2)
 
 
+def test_bm25_validates_direct_search_inputs():
+    index = _retriever().bm25
+
+    with pytest.raises(ValueError, match="query"):
+        index.search(" ")
+    with pytest.raises(ValueError, match="top_k"):
+        index.search("security", top_k=0)
+
+
 def test_diversifier_reduces_repeated_context():
     items = [
         RetrievedChunk(
