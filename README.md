@@ -117,7 +117,7 @@ tests/              unit tests for retrieval, citations, and evaluation
 
 The evaluation runner reports:
 
-- Retrieval Recall@K
+- Retrieval Recall@K over all expected evidence documents
 - MRR
 - nDCG@K
 - Context precision@K

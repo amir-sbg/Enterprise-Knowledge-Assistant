@@ -39,7 +39,7 @@ def evaluate_pipeline(
         retrieved_doc_ids = [item.chunk.document_id for item in answer.retrieval[:top_k]]
         expected = set(case.expected_doc_ids)
 
-        recall = int(bool(expected & set(retrieved_doc_ids)))
+        recall = _recall_at_k(retrieved_doc_ids, expected, top_k=top_k)
         reciprocal_rank = _reciprocal_rank(retrieved_doc_ids, expected)
         ndcg = _ndcg_at_k(retrieved_doc_ids, expected, top_k=top_k)
         context_precision = _context_precision_at_k(retrieved_doc_ids, expected, top_k=top_k)
@@ -114,7 +114,7 @@ def evaluate_retrieval_modes(
                     "id": case.id,
                     "mode": mode,
                     "retrieved_doc_ids": retrieved_doc_ids,
-                    "recall_at_k": int(bool(expected & set(retrieved_doc_ids))),
+                    "recall_at_k": _recall_at_k(retrieved_doc_ids, expected, top_k=top_k),
                     "mrr": _reciprocal_rank(retrieved_doc_ids, expected),
                     "ndcg_at_k": _ndcg_at_k(retrieved_doc_ids, expected, top_k=top_k),
                     "context_precision_at_k": _context_precision_at_k(
@@ -180,6 +180,13 @@ def _reciprocal_rank(retrieved_doc_ids: list[str], expected: set[str]) -> float:
         if doc_id in expected:
             return 1.0 / idx
     return 0.0
+
+
+def _recall_at_k(retrieved_doc_ids: list[str], expected: set[str], top_k: int) -> float:
+    if top_k < 1 or not expected:
+        return 0.0
+    retrieved = set(retrieved_doc_ids[:top_k])
+    return len(retrieved & expected) / len(expected)
 
 
 def _dcg(relevance: list[int]) -> float:

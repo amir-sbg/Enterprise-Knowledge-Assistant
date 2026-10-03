@@ -5,6 +5,7 @@ import pytest
 from rag_system.evaluation import (
     _context_precision_at_k,
     _ndcg_at_k,
+    _recall_at_k,
     evaluate_pipeline,
     evaluate_retrieval_modes,
     load_eval_cases,
@@ -124,6 +125,13 @@ def test_ranking_metrics_discount_late_and_duplicate_hits():
     assert strong == 1.0
     assert late < strong
     assert precision == 2 / 3
+
+
+def test_recall_at_k_counts_all_expected_documents() -> None:
+    expected = {"security", "governance"}
+
+    assert _recall_at_k(["security", "travel"], expected, top_k=2) == 0.5
+    assert _recall_at_k(["security", "security", "governance"], expected, top_k=3) == 1.0
 
 
 def test_index_manifest_tracks_build_settings(tmp_path: Path):
