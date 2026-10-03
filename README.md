@@ -29,6 +29,7 @@ The default implementation runs locally with deterministic embeddings and an ext
 - Retrieval and answer evaluation suite
 - Retrieval-mode ablations for hybrid, semantic-only, and BM25-only search
 - Retrieval coverage metrics for duplicate context and source diversity
+- Retrieval confidence diagnostics from score margin and score concentration
 - Latency, token, and estimated cost tracking
 - Query-result caching
 - FastAPI backend

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -212,11 +213,21 @@ def retrieval_coverage_metrics(retrieved: list[RetrievedChunk]) -> dict[str, flo
             "duplicate_document_rate": 0.0,
             "top_retrieval_score": 0.0,
             "mean_retrieval_score": 0.0,
+            "top_score_margin": 0.0,
+            "score_concentration": 0.0,
         }
 
     document_ids = [item.chunk.document_id for item in retrieved]
     unique_documents = len(set(document_ids))
     scores = [float(item.score) for item in retrieved]
+    ranked_scores = sorted(scores, reverse=True)
+    top_score_margin = ranked_scores[0] - ranked_scores[1] if len(ranked_scores) > 1 else ranked_scores[0]
+    shifted = [score - ranked_scores[0] for score in ranked_scores]
+    exponentials = [math.exp(score) for score in shifted]
+    total_exponential = sum(exponentials)
+    probabilities = [value / total_exponential for value in exponentials]
+    entropy = -sum(probability * math.log(probability) for probability in probabilities)
+    concentration = 1.0 if len(scores) == 1 else 1.0 - entropy / math.log(len(scores))
     return {
         "retrieved_chunks": len(retrieved),
         "unique_retrieved_documents": unique_documents,
@@ -224,6 +235,8 @@ def retrieval_coverage_metrics(retrieved: list[RetrievedChunk]) -> dict[str, flo
         "duplicate_document_rate": round(1.0 - unique_documents / len(retrieved), 4),
         "top_retrieval_score": round(max(scores), 6),
         "mean_retrieval_score": round(sum(scores) / len(scores), 6),
+        "top_score_margin": round(top_score_margin, 6),
+        "score_concentration": round(concentration, 6),
     }
 
 

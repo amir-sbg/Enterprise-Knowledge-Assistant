@@ -189,6 +189,23 @@ def test_retrieval_coverage_metrics_track_duplicate_context() -> None:
     assert metrics["retrieved_chunks"] == 3
     assert metrics["unique_retrieved_documents"] == 2
     assert metrics["duplicate_document_rate"] == 0.3333
+    assert metrics["top_score_margin"] == pytest.approx(0.2)
+    assert 0.0 <= metrics["score_concentration"] <= 1.0
+
+
+def test_retrieval_score_concentration_increases_with_clear_winner() -> None:
+    flat = [
+        RetrievedChunk(Chunk("a", "a", "a"), score=0.5),
+        RetrievedChunk(Chunk("b", "b", "b"), score=0.5),
+    ]
+    decisive = [
+        RetrievedChunk(Chunk("a", "a", "a"), score=5.0),
+        RetrievedChunk(Chunk("b", "b", "b"), score=0.0),
+    ]
+
+    assert retrieval_coverage_metrics(decisive)["score_concentration"] > retrieval_coverage_metrics(flat)[
+        "score_concentration"
+    ]
 
 
 def test_metadata_facets_counts_chunk_metadata() -> None:
