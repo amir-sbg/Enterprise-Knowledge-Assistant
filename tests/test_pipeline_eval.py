@@ -4,6 +4,7 @@ import pytest
 
 from rag_system.evaluation import (
     _context_precision_at_k,
+    _citation_metrics,
     _ndcg_at_k,
     _recall_at_k,
     evaluate_pipeline,
@@ -99,6 +100,7 @@ def test_eval_suite_reports_retrieval_metrics(tmp_path: Path):
     assert "ndcg_at_k" in report["summary"]
     assert "context_precision_at_k" in report["summary"]
     assert "hallucination_rate" in report["summary"]
+    assert "citation_f1" in report["summary"]
     assert "cost_per_query_avg" in report["summary"]
 
 
@@ -132,6 +134,17 @@ def test_recall_at_k_counts_all_expected_documents() -> None:
 
     assert _recall_at_k(["security", "travel"], expected, top_k=2) == 0.5
     assert _recall_at_k(["security", "security", "governance"], expected, top_k=3) == 1.0
+
+
+def test_citation_metrics_penalize_extra_and_missing_sources() -> None:
+    metrics = _citation_metrics(
+        {"security", "travel"},
+        {"security", "governance"},
+    )
+
+    assert metrics["precision"] == 0.5
+    assert metrics["recall"] == 0.5
+    assert metrics["f1"] == 0.5
 
 
 def test_index_manifest_tracks_build_settings(tmp_path: Path):

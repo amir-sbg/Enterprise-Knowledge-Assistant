@@ -45,7 +45,7 @@ def evaluate_pipeline(
         context_precision = _context_precision_at_k(retrieved_doc_ids, expected, top_k=top_k)
         correctness = _answer_correctness(answer.text, case.answer_keywords)
         cited_doc_ids = {citation.document_id for citation in answer.citations}
-        citation_accuracy = len(expected & cited_doc_ids) / max(len(expected), 1)
+        citation_metrics = _citation_metrics(cited_doc_ids, expected)
 
         rows.append(
             {
@@ -60,7 +60,10 @@ def evaluate_pipeline(
                 "answer_correctness": correctness,
                 "faithfulness": answer.metrics.get("faithfulness", 0.0),
                 "hallucination_rate": 1.0 - answer.metrics.get("faithfulness", 0.0),
-                "citation_accuracy": citation_accuracy,
+                "citation_accuracy": citation_metrics["recall"],
+                "citation_precision": citation_metrics["precision"],
+                "citation_recall": citation_metrics["recall"],
+                "citation_f1": citation_metrics["f1"],
                 "latency_ms": answer.metrics.get("latency_ms", 0.0),
                 "estimated_cost_usd": answer.metrics.get("estimated_cost_usd", 0.0),
             }
@@ -85,6 +88,15 @@ def evaluate_pipeline(
             if rows
             else 0.0,
             "citation_accuracy": round(mean([row["citation_accuracy"] for row in rows]), 4)
+            if rows
+            else 0.0,
+            "citation_precision": round(mean([row["citation_precision"] for row in rows]), 4)
+            if rows
+            else 0.0,
+            "citation_recall": round(mean([row["citation_recall"] for row in rows]), 4)
+            if rows
+            else 0.0,
+            "citation_f1": round(mean([row["citation_f1"] for row in rows]), 4)
             if rows
             else 0.0,
             "latency_ms_avg": round(mean([row["latency_ms"] for row in rows]), 2) if rows else 0.0,
@@ -240,3 +252,11 @@ def _answer_correctness(answer: str, keywords: list[str]) -> float:
     answer_terms = token_set(answer)
     hits = sum(1 for keyword in keywords if token_set(keyword) & answer_terms)
     return hits / len(keywords)
+
+
+def _citation_metrics(cited: set[str], expected: set[str]) -> dict[str, float]:
+    overlap = len(cited & expected)
+    precision = overlap / len(cited) if cited else 0.0
+    recall = overlap / len(expected) if expected else 0.0
+    f1 = 2.0 * precision * recall / (precision + recall) if precision + recall else 0.0
+    return {"precision": precision, "recall": recall, "f1": f1}

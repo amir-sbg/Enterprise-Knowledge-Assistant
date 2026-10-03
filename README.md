@@ -124,7 +124,7 @@ The evaluation runner reports:
 - Answer correctness
 - Faithfulness
 - Hallucination rate
-- Citation accuracy
+- Citation precision, recall, F1, and support accuracy
 - Hybrid/semantic/BM25 retrieval ablations
 - Source coverage and duplicate-context rate
 - Latency per query
