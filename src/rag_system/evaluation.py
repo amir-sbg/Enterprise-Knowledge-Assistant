@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import random
 from pathlib import Path
 from statistics import mean
 from typing import Any
@@ -69,41 +70,50 @@ def evaluate_pipeline(
             }
         )
 
+    summary = {
+        "cases": len(rows),
+        "recall_at_k": round(mean([row["recall_at_k"] for row in rows]), 4) if rows else 0.0,
+        "mrr": round(mean([row["mrr"] for row in rows]), 4) if rows else 0.0,
+        "ndcg_at_k": round(mean([row["ndcg_at_k"] for row in rows]), 4) if rows else 0.0,
+        "context_precision_at_k": round(
+            mean([row["context_precision_at_k"] for row in rows]), 4
+        )
+        if rows
+        else 0.0,
+        "answer_correctness": round(mean([row["answer_correctness"] for row in rows]), 4)
+        if rows
+        else 0.0,
+        "faithfulness": round(mean([row["faithfulness"] for row in rows]), 4) if rows else 0.0,
+        "hallucination_rate": round(mean([row["hallucination_rate"] for row in rows]), 4)
+        if rows
+        else 0.0,
+        "citation_accuracy": round(mean([row["citation_accuracy"] for row in rows]), 4)
+        if rows
+        else 0.0,
+        "citation_precision": round(mean([row["citation_precision"] for row in rows]), 4)
+        if rows
+        else 0.0,
+        "citation_recall": round(mean([row["citation_recall"] for row in rows]), 4)
+        if rows
+        else 0.0,
+        "citation_f1": round(mean([row["citation_f1"] for row in rows]), 4)
+        if rows
+        else 0.0,
+        "latency_ms_avg": round(mean([row["latency_ms"] for row in rows]), 2) if rows else 0.0,
+        "cost_per_query_avg": round(mean([row["estimated_cost_usd"] for row in rows]), 8)
+        if rows
+        else 0.0,
+    }
+    interval_metrics = ("recall_at_k", "ndcg_at_k", "faithfulness", "citation_f1")
+    summary["confidence_intervals"] = {
+        metric: _bootstrap_mean_interval(
+            [float(row[metric]) for row in rows],
+            seed=42 + index,
+        )
+        for index, metric in enumerate(interval_metrics)
+    }
     return {
-        "summary": {
-            "cases": len(rows),
-            "recall_at_k": round(mean([row["recall_at_k"] for row in rows]), 4) if rows else 0.0,
-            "mrr": round(mean([row["mrr"] for row in rows]), 4) if rows else 0.0,
-            "ndcg_at_k": round(mean([row["ndcg_at_k"] for row in rows]), 4) if rows else 0.0,
-            "context_precision_at_k": round(
-                mean([row["context_precision_at_k"] for row in rows]), 4
-            )
-            if rows
-            else 0.0,
-            "answer_correctness": round(mean([row["answer_correctness"] for row in rows]), 4)
-            if rows
-            else 0.0,
-            "faithfulness": round(mean([row["faithfulness"] for row in rows]), 4) if rows else 0.0,
-            "hallucination_rate": round(mean([row["hallucination_rate"] for row in rows]), 4)
-            if rows
-            else 0.0,
-            "citation_accuracy": round(mean([row["citation_accuracy"] for row in rows]), 4)
-            if rows
-            else 0.0,
-            "citation_precision": round(mean([row["citation_precision"] for row in rows]), 4)
-            if rows
-            else 0.0,
-            "citation_recall": round(mean([row["citation_recall"] for row in rows]), 4)
-            if rows
-            else 0.0,
-            "citation_f1": round(mean([row["citation_f1"] for row in rows]), 4)
-            if rows
-            else 0.0,
-            "latency_ms_avg": round(mean([row["latency_ms"] for row in rows]), 2) if rows else 0.0,
-            "cost_per_query_avg": round(mean([row["estimated_cost_usd"] for row in rows]), 8)
-            if rows
-            else 0.0,
-        },
+        "summary": summary,
         "rows": rows,
     }
 
@@ -260,3 +270,39 @@ def _citation_metrics(cited: set[str], expected: set[str]) -> dict[str, float]:
     recall = overlap / len(expected) if expected else 0.0
     f1 = 2.0 * precision * recall / (precision + recall) if precision + recall else 0.0
     return {"precision": precision, "recall": recall, "f1": f1}
+
+
+def _bootstrap_mean_interval(
+    values: list[float],
+    *,
+    samples: int = 1000,
+    confidence: float = 0.95,
+    seed: int = 42,
+) -> dict[str, float]:
+    if samples < 1:
+        raise ValueError("samples must be positive")
+    if not 0.0 < confidence < 1.0:
+        raise ValueError("confidence must be between 0 and 1")
+    if not values:
+        return {"low": 0.0, "high": 0.0}
+    if any(not isinstance(value, (int, float)) for value in values):
+        raise ValueError("bootstrap values must be numeric")
+
+    rng = random.Random(seed)
+    estimates = sorted(
+        mean(rng.choice(values) for _ in values)
+        for _ in range(samples)
+    )
+    tail = (1.0 - confidence) / 2.0
+    return {
+        "low": round(_quantile(estimates, tail), 4),
+        "high": round(_quantile(estimates, 1.0 - tail), 4),
+    }
+
+
+def _quantile(sorted_values: list[float], fraction: float) -> float:
+    position = (len(sorted_values) - 1) * fraction
+    lower = int(position)
+    upper = min(lower + 1, len(sorted_values) - 1)
+    weight = position - lower
+    return sorted_values[lower] * (1.0 - weight) + sorted_values[upper] * weight

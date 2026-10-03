@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from rag_system.evaluation import (
+    _bootstrap_mean_interval,
     _context_precision_at_k,
     _citation_metrics,
     _ndcg_at_k,
@@ -101,6 +102,8 @@ def test_eval_suite_reports_retrieval_metrics(tmp_path: Path):
     assert "context_precision_at_k" in report["summary"]
     assert "hallucination_rate" in report["summary"]
     assert "citation_f1" in report["summary"]
+    assert "confidence_intervals" in report["summary"]
+    assert "recall_at_k" in report["summary"]["confidence_intervals"]
     assert "cost_per_query_avg" in report["summary"]
 
 
@@ -145,6 +148,14 @@ def test_citation_metrics_penalize_extra_and_missing_sources() -> None:
     assert metrics["precision"] == 0.5
     assert metrics["recall"] == 0.5
     assert metrics["f1"] == 0.5
+
+
+def test_bootstrap_interval_is_reproducible_and_contains_mean() -> None:
+    first = _bootstrap_mean_interval([0.0, 0.5, 1.0], samples=300, seed=8)
+    second = _bootstrap_mean_interval([0.0, 0.5, 1.0], samples=300, seed=8)
+
+    assert first == second
+    assert first["low"] <= 0.5 <= first["high"]
 
 
 def test_index_manifest_tracks_build_settings(tmp_path: Path):

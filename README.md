@@ -27,6 +27,7 @@ The default implementation runs locally with deterministic embeddings and an ext
 - Low-evidence abstention with a configurable retrieval score floor
 - Citation verification and faithfulness checks
 - Retrieval and answer evaluation suite
+- Bootstrap confidence intervals for key retrieval, faithfulness, and citation metrics
 - Retrieval-mode ablations for hybrid, semantic-only, and BM25-only search
 - Retrieval coverage metrics for duplicate context and source diversity
 - Retrieval confidence diagnostics from score margin and score concentration
