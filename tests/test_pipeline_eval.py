@@ -11,6 +11,7 @@ from rag_system.evaluation import (
     evaluate_pipeline,
     evaluate_retrieval_modes,
     load_eval_cases,
+    paired_bootstrap_difference,
 )
 from rag_system.pipeline import (
     RAGPipeline,
@@ -118,6 +119,26 @@ def test_retrieval_ablation_compares_search_modes(tmp_path: Path):
     assert {row["mode"] for row in report["summary"]} == {"hybrid", "semantic", "bm25"}
     assert len(report["rows"]) == 12
     assert all("context_precision_at_k" in row for row in report["summary"])
+    assert len(report["comparisons"]) == 6
+    assert {row["comparison"] for row in report["comparisons"]} == {"semantic", "bm25"}
+
+
+def test_paired_bootstrap_reports_direction_and_interval() -> None:
+    report = paired_bootstrap_difference(
+        [1.0, 0.8, 0.9, 0.7],
+        [0.4, 0.5, 0.3, 0.2],
+        samples=400,
+        seed=7,
+    )
+
+    assert report["mean_difference"] > 0
+    assert report["confidence_interval"]["low"] > 0
+    assert report["probability_reference_better"] == 1.0
+
+
+def test_paired_bootstrap_rejects_unpaired_inputs() -> None:
+    with pytest.raises(ValueError, match="same length"):
+        paired_bootstrap_difference([1.0], [1.0, 0.0])
 
 
 def test_ranking_metrics_discount_late_and_duplicate_hits():

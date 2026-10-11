@@ -172,7 +172,70 @@ def evaluate_retrieval_modes(
                 else 0.0,
             }
         )
-    return {"summary": summary, "rows": rows}
+    comparisons = []
+    if modes:
+        reference = modes[0]
+        reference_rows = {row["id"]: row for row in rows if row["mode"] == reference}
+        for mode_index, mode in enumerate(modes[1:], start=1):
+            candidate_rows = {row["id"]: row for row in rows if row["mode"] == mode}
+            shared_ids = sorted(reference_rows.keys() & candidate_rows.keys())
+            for metric_index, metric in enumerate(("recall_at_k", "mrr", "ndcg_at_k")):
+                comparison = paired_bootstrap_difference(
+                    [float(reference_rows[case_id][metric]) for case_id in shared_ids],
+                    [float(candidate_rows[case_id][metric]) for case_id in shared_ids],
+                    seed=100 + mode_index * 10 + metric_index,
+                )
+                comparisons.append(
+                    {
+                        "reference": reference,
+                        "comparison": mode,
+                        "metric": metric,
+                        "cases": len(shared_ids),
+                        **comparison,
+                    }
+                )
+    return {"summary": summary, "comparisons": comparisons, "rows": rows}
+
+
+def paired_bootstrap_difference(
+    reference: list[float],
+    comparison: list[float],
+    *,
+    samples: int = 1000,
+    confidence: float = 0.95,
+    seed: int = 42,
+) -> dict[str, Any]:
+    if len(reference) != len(comparison):
+        raise ValueError("paired samples must have the same length")
+    if samples < 1:
+        raise ValueError("samples must be positive")
+    if not 0.0 < confidence < 1.0:
+        raise ValueError("confidence must be between 0 and 1")
+    if not reference:
+        return {
+            "mean_difference": 0.0,
+            "confidence_interval": {"low": 0.0, "high": 0.0},
+            "probability_reference_better": 0.0,
+        }
+
+    differences = [left - right for left, right in zip(reference, comparison)]
+    rng = random.Random(seed)
+    estimates = sorted(
+        mean(rng.choice(differences) for _ in differences)
+        for _ in range(samples)
+    )
+    tail = (1.0 - confidence) / 2.0
+    return {
+        "mean_difference": round(mean(differences), 4),
+        "confidence_interval": {
+            "low": round(_quantile(estimates, tail), 4),
+            "high": round(_quantile(estimates, 1.0 - tail), 4),
+        },
+        "probability_reference_better": round(
+            sum(estimate > 0.0 for estimate in estimates) / len(estimates),
+            4,
+        ),
+    }
 
 
 def _retrieve_for_mode(
