@@ -21,7 +21,7 @@ The default implementation runs locally with deterministic embeddings and an ext
 - In-memory vector index with cosine search
 - BM25 lexical retrieval
 - Hybrid retrieval with metadata filters and tunable semantic/BM25 fusion weights
-- Lightweight reranker
+- Lightweight reranker that preserves the configured semantic/BM25 balance
 - Query rewriting
 - Citation-aware answer generation
 - Low-evidence abstention with a configurable retrieval score floor

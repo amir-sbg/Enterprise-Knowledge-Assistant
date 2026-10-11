@@ -4,6 +4,7 @@ from rag_system.bm25 import BM25Index
 from rag_system.chunking import TokenChunker
 from rag_system.diversity import diversify_results
 from rag_system.embeddings import HashEmbeddingModel
+from rag_system.reranker import LightweightReranker
 from rag_system.retriever import HybridRetriever
 from rag_system.schema import Chunk, Document, RetrievedChunk
 from rag_system.vector_store import InMemoryVectorStore
@@ -121,6 +122,38 @@ def test_retriever_validates_fusion_weights():
             semantic_weight=0.0,
             bm25_weight=0.0,
         )
+
+
+def test_reranker_preserves_configured_retrieval_preference():
+    semantic = RetrievedChunk(
+        Chunk("semantic", "semantic", "policy evidence"),
+        score=0.03,
+        semantic_score=0.03,
+        bm25_score=0.01,
+    )
+    lexical = RetrievedChunk(
+        Chunk("lexical", "lexical", "policy evidence"),
+        score=0.03,
+        semantic_score=0.01,
+        bm25_score=0.03,
+    )
+    reranker = LightweightReranker()
+
+    semantic_first = reranker.rerank(
+        "policy evidence",
+        [semantic, lexical],
+        semantic_weight=3.0,
+        bm25_weight=0.5,
+    )
+    lexical_first = reranker.rerank(
+        "policy evidence",
+        [semantic, lexical],
+        semantic_weight=0.5,
+        bm25_weight=3.0,
+    )
+
+    assert semantic_first[0].chunk.id == "semantic"
+    assert lexical_first[0].chunk.id == "lexical"
 
 
 def test_retriever_validates_query_and_candidate_budget():

@@ -60,6 +60,8 @@ class HybridRetriever:
             rewritten,
             fused,
             top_k=max(top_k * 3, top_k),
+            semantic_weight=self.semantic_weight,
+            bm25_weight=self.bm25_weight,
         )
         return diversify_results(
             reranked,
