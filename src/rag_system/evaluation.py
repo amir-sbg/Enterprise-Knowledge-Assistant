@@ -118,6 +118,7 @@ def evaluate_pipeline(
         [float(row["retrieval_confidence"]) for row in rows],
         [int(row["retrieval_hit"]) for row in rows],
     )
+    summary["failure_analysis"] = retrieval_failure_summary(rows)
     return {
         "summary": summary,
         "rows": rows,
@@ -177,6 +178,49 @@ def retrieval_confidence_calibration(
         "ece": round(ece, 4),
         "brier_score": round(brier, 4),
         "bins": calibration_rows,
+    }
+
+
+def retrieval_failure_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    if not rows:
+        return {
+            "cases": 0,
+            "complete_retrieval_rate": 0.0,
+            "partial_retrieval_rate": 0.0,
+            "no_retrieval_hit_rate": 0.0,
+            "unfaithful_answer_rate": 0.0,
+            "citation_failure_rate": 0.0,
+            "case_ids": {},
+        }
+    required = {"id", "recall_at_k", "faithfulness", "citation_f1"}
+    for row in rows:
+        missing = required.difference(row)
+        if missing:
+            raise ValueError(f"evaluation row is missing fields: {sorted(missing)}")
+
+    complete = [row["id"] for row in rows if float(row["recall_at_k"]) >= 1.0]
+    partial = [
+        row["id"]
+        for row in rows
+        if 0.0 < float(row["recall_at_k"]) < 1.0
+    ]
+    no_hit = [row["id"] for row in rows if float(row["recall_at_k"]) == 0.0]
+    unfaithful = [row["id"] for row in rows if float(row["faithfulness"]) < 1.0]
+    citation_failure = [row["id"] for row in rows if float(row["citation_f1"]) < 1.0]
+    count = len(rows)
+    return {
+        "cases": count,
+        "complete_retrieval_rate": round(len(complete) / count, 4),
+        "partial_retrieval_rate": round(len(partial) / count, 4),
+        "no_retrieval_hit_rate": round(len(no_hit) / count, 4),
+        "unfaithful_answer_rate": round(len(unfaithful) / count, 4),
+        "citation_failure_rate": round(len(citation_failure) / count, 4),
+        "case_ids": {
+            "partial_retrieval": partial,
+            "no_retrieval_hit": no_hit,
+            "unfaithful_answer": unfaithful,
+            "citation_failure": citation_failure,
+        },
     }
 
 

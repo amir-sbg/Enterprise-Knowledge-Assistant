@@ -33,6 +33,7 @@ The default implementation runs locally with deterministic embeddings and an ext
 - Retrieval coverage metrics for duplicate context and source diversity
 - Retrieval confidence diagnostics from score margin and score concentration
 - Retrieval-confidence calibration with ECE and Brier score against evidence hits
+- Query-level failure analysis for complete, partial, and missed retrieval plus citation failures
 - Latency, token, and estimated cost tracking
 - Query-result caching
 - FastAPI backend

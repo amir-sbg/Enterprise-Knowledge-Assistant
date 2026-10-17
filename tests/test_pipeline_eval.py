@@ -13,6 +13,7 @@ from rag_system.evaluation import (
     load_eval_cases,
     paired_bootstrap_difference,
     retrieval_confidence_calibration,
+    retrieval_failure_summary,
 )
 from rag_system.pipeline import (
     RAGPipeline,
@@ -109,6 +110,7 @@ def test_eval_suite_reports_retrieval_metrics(tmp_path: Path):
     assert "cost_per_query_avg" in report["summary"]
     assert "retrieval_confidence_calibration" in report["summary"]
     assert report["summary"]["retrieval_confidence_calibration"]["rows"] == 4
+    assert report["summary"]["failure_analysis"]["cases"] == 4
 
 
 def test_retrieval_confidence_calibration_reports_reliability() -> None:
@@ -122,6 +124,21 @@ def test_retrieval_confidence_calibration_reports_reliability() -> None:
     assert report["brier_score"] == pytest.approx(0.0375)
     assert report["ece"] == pytest.approx(0.175)
     assert len(report["bins"]) == 2
+
+
+def test_retrieval_failure_summary_separates_failure_modes() -> None:
+    report = retrieval_failure_summary(
+        [
+            {"id": "ok", "recall_at_k": 1.0, "faithfulness": 1.0, "citation_f1": 1.0},
+            {"id": "partial", "recall_at_k": 0.5, "faithfulness": 1.0, "citation_f1": 0.5},
+            {"id": "miss", "recall_at_k": 0.0, "faithfulness": 0.5, "citation_f1": 0.0},
+        ]
+    )
+
+    assert report["complete_retrieval_rate"] == pytest.approx(1 / 3, abs=1e-4)
+    assert report["partial_retrieval_rate"] == pytest.approx(1 / 3, abs=1e-4)
+    assert report["no_retrieval_hit_rate"] == pytest.approx(1 / 3, abs=1e-4)
+    assert report["case_ids"]["no_retrieval_hit"] == ["miss"]
 
 
 def test_retrieval_ablation_compares_search_modes(tmp_path: Path):
