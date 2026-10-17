@@ -12,6 +12,7 @@ from rag_system.evaluation import (
     evaluate_retrieval_modes,
     load_eval_cases,
     paired_bootstrap_difference,
+    paired_sign_test,
     retrieval_confidence_calibration,
     retrieval_failure_summary,
 )
@@ -172,6 +173,18 @@ def test_paired_bootstrap_reports_direction_and_interval() -> None:
 def test_paired_bootstrap_rejects_unpaired_inputs() -> None:
     with pytest.raises(ValueError, match="same length"):
         paired_bootstrap_difference([1.0], [1.0, 0.0])
+
+
+def test_paired_sign_test_counts_query_level_wins() -> None:
+    report = paired_sign_test(
+        [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.1],
+        [0.5, 0.4, 0.3, 0.2, 0.1, 0.0, 0.2, 0.2],
+    )
+
+    assert report["reference_wins"] == 7
+    assert report["comparison_wins"] == 1
+    assert report["ties"] == 0
+    assert report["two_sided_p_value"] == pytest.approx(0.070312)
 
 
 def test_ranking_metrics_discount_late_and_duplicate_hits():

@@ -29,6 +29,7 @@ The default implementation runs locally with deterministic embeddings and an ext
 - Retrieval and answer evaluation suite
 - Bootstrap confidence intervals for key retrieval, faithfulness, and citation metrics
 - Retrieval-mode ablations for hybrid, semantic-only, and BM25-only search
+- Paired bootstrap intervals and exact sign tests for retrieval-mode comparisons
 - Paired bootstrap comparisons for retrieval ablations
 - Retrieval coverage metrics for duplicate context and source diversity
 - Retrieval confidence diagnostics from score margin and score concentration

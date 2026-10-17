@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import random
 from pathlib import Path
 from statistics import mean
@@ -298,6 +299,10 @@ def evaluate_retrieval_modes(
                         "metric": metric,
                         "cases": len(shared_ids),
                         **comparison,
+                        "sign_test": paired_sign_test(
+                            [float(reference_rows[case_id][metric]) for case_id in shared_ids],
+                            [float(candidate_rows[case_id][metric]) for case_id in shared_ids],
+                        ),
                     }
                 )
     return {"summary": summary, "comparisons": comparisons, "rows": rows}
@@ -341,6 +346,37 @@ def paired_bootstrap_difference(
             sum(estimate > 0.0 for estimate in estimates) / len(estimates),
             4,
         ),
+    }
+
+
+def paired_sign_test(
+    reference: list[float],
+    comparison: list[float],
+    *,
+    tie_tolerance: float = 1e-12,
+) -> dict[str, Any]:
+    if len(reference) != len(comparison):
+        raise ValueError("paired samples must have the same length")
+    if tie_tolerance < 0:
+        raise ValueError("tie_tolerance must not be negative")
+    differences = [left - right for left, right in zip(reference, comparison)]
+    reference_wins = sum(value > tie_tolerance for value in differences)
+    comparison_wins = sum(value < -tie_tolerance for value in differences)
+    ties = len(differences) - reference_wins - comparison_wins
+    trials = reference_wins + comparison_wins
+    if trials:
+        tail = min(reference_wins, comparison_wins)
+        probability = 2.0 * sum(
+            math.comb(trials, index) for index in range(tail + 1)
+        ) / (2**trials)
+        p_value = min(1.0, probability)
+    else:
+        p_value = 1.0
+    return {
+        "reference_wins": reference_wins,
+        "comparison_wins": comparison_wins,
+        "ties": ties,
+        "two_sided_p_value": round(p_value, 6),
     }
 
 
