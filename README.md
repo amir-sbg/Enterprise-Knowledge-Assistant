@@ -32,6 +32,7 @@ The default implementation runs locally with deterministic embeddings and an ext
 - Paired bootstrap comparisons for retrieval ablations
 - Retrieval coverage metrics for duplicate context and source diversity
 - Retrieval confidence diagnostics from score margin and score concentration
+- Retrieval-confidence calibration with ECE and Brier score against evidence hits
 - Latency, token, and estimated cost tracking
 - Query-result caching
 - FastAPI backend

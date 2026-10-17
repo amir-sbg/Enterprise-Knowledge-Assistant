@@ -12,6 +12,7 @@ from rag_system.evaluation import (
     evaluate_retrieval_modes,
     load_eval_cases,
     paired_bootstrap_difference,
+    retrieval_confidence_calibration,
 )
 from rag_system.pipeline import (
     RAGPipeline,
@@ -106,6 +107,21 @@ def test_eval_suite_reports_retrieval_metrics(tmp_path: Path):
     assert "confidence_intervals" in report["summary"]
     assert "recall_at_k" in report["summary"]["confidence_intervals"]
     assert "cost_per_query_avg" in report["summary"]
+    assert "retrieval_confidence_calibration" in report["summary"]
+    assert report["summary"]["retrieval_confidence_calibration"]["rows"] == 4
+
+
+def test_retrieval_confidence_calibration_reports_reliability() -> None:
+    report = retrieval_confidence_calibration(
+        confidences=[0.1, 0.3, 0.8, 0.9],
+        outcomes=[0, 0, 1, 1],
+        bins=2,
+    )
+
+    assert report["rows"] == 4
+    assert report["brier_score"] == pytest.approx(0.0375)
+    assert report["ece"] == pytest.approx(0.175)
+    assert len(report["bins"]) == 2
 
 
 def test_retrieval_ablation_compares_search_modes(tmp_path: Path):

@@ -67,6 +67,8 @@ def evaluate_pipeline(
                 "citation_f1": citation_metrics["f1"],
                 "latency_ms": answer.metrics.get("latency_ms", 0.0),
                 "estimated_cost_usd": answer.metrics.get("estimated_cost_usd", 0.0),
+                "retrieval_confidence": answer.metrics.get("score_concentration", 0.0),
+                "retrieval_hit": float(recall > 0.0),
             }
         )
 
@@ -112,9 +114,69 @@ def evaluate_pipeline(
         )
         for index, metric in enumerate(interval_metrics)
     }
+    summary["retrieval_confidence_calibration"] = retrieval_confidence_calibration(
+        [float(row["retrieval_confidence"]) for row in rows],
+        [int(row["retrieval_hit"]) for row in rows],
+    )
     return {
         "summary": summary,
         "rows": rows,
+    }
+
+
+def retrieval_confidence_calibration(
+    confidences: list[float],
+    outcomes: list[int],
+    *,
+    bins: int = 5,
+) -> dict[str, Any]:
+    if len(confidences) != len(outcomes):
+        raise ValueError("confidence and outcome rows must match")
+    if bins < 2:
+        raise ValueError("bins must be at least 2")
+    if any(not 0.0 <= value <= 1.0 for value in confidences):
+        raise ValueError("retrieval confidences must be in [0, 1]")
+    if any(value not in {0, 1} for value in outcomes):
+        raise ValueError("retrieval outcomes must be binary")
+    if not confidences:
+        return {"rows": 0, "ece": 0.0, "brier_score": 0.0, "bins": []}
+
+    calibration_rows = []
+    ece = 0.0
+    for index in range(bins):
+        lower = index / bins
+        upper = (index + 1) / bins
+        selected = [
+            row
+            for row, confidence in enumerate(confidences)
+            if confidence >= lower
+            and (confidence < upper if index < bins - 1 else confidence <= upper)
+        ]
+        if not selected:
+            continue
+        mean_confidence = mean(confidences[row] for row in selected)
+        hit_rate = mean(outcomes[row] for row in selected)
+        gap = abs(mean_confidence - hit_rate)
+        ece += len(selected) / len(confidences) * gap
+        calibration_rows.append(
+            {
+                "lower": lower,
+                "upper": upper,
+                "rows": len(selected),
+                "mean_confidence": round(mean_confidence, 4),
+                "hit_rate": round(hit_rate, 4),
+                "absolute_gap": round(gap, 4),
+            }
+        )
+    brier = mean(
+        (confidence - outcome) ** 2
+        for confidence, outcome in zip(confidences, outcomes)
+    )
+    return {
+        "rows": len(confidences),
+        "ece": round(ece, 4),
+        "brier_score": round(brier, 4),
+        "bins": calibration_rows,
     }
 
 
