@@ -15,6 +15,7 @@ from rag_system.evaluation import (
     paired_sign_test,
     retrieval_confidence_calibration,
     retrieval_failure_summary,
+    retrieval_perturbation_stability,
     selective_risk_coverage_curve,
 )
 from rag_system.pipeline import (
@@ -165,6 +166,20 @@ def test_retrieval_failure_summary_separates_failure_modes() -> None:
     assert report["partial_retrieval_rate"] == pytest.approx(1 / 3, abs=1e-4)
     assert report["no_retrieval_hit_rate"] == pytest.approx(1 / 3, abs=1e-4)
     assert report["case_ids"]["no_retrieval_hit"] == ["miss"]
+
+
+def test_retrieval_perturbation_stability_reports_rank_consistency(tmp_path: Path) -> None:
+    index_path = tmp_path / "idx"
+    build_index("data/sample_docs", index_path)
+    pipeline = RAGPipeline.load(index_path)
+    cases = load_eval_cases("eval/queries.jsonl")[:2]
+
+    report = retrieval_perturbation_stability(pipeline, cases, top_k=3)
+
+    assert report["cases"] == 2
+    assert 0.0 <= report["mean_set_jaccard"] <= 1.0
+    assert 0.0 <= report["top1_consistency"] <= 1.0
+    assert len(report["rows"]) == 2
 
 
 def test_retrieval_ablation_compares_search_modes(tmp_path: Path):

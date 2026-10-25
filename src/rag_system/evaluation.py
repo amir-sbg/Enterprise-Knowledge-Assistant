@@ -124,6 +124,11 @@ def evaluate_pipeline(
         [int(row["retrieval_hit"]) for row in rows],
     )
     summary["failure_analysis"] = retrieval_failure_summary(rows)
+    summary["query_perturbation_stability"] = retrieval_perturbation_stability(
+        pipeline,
+        cases,
+        top_k=top_k,
+    )
     return {
         "summary": summary,
         "rows": rows,
@@ -275,6 +280,53 @@ def retrieval_failure_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "unfaithful_answer": unfaithful,
             "citation_failure": citation_failure,
         },
+    }
+
+
+def retrieval_perturbation_stability(
+    pipeline: RAGPipeline,
+    cases: list[EvalCase],
+    *,
+    top_k: int = 5,
+) -> dict[str, Any]:
+    if top_k < 1:
+        raise ValueError("top_k must be positive")
+    rows = []
+    for case in cases:
+        original = pipeline.retriever.retrieve(
+            case.question,
+            top_k=top_k,
+            filters=case.filters,
+        )
+        perturbed_question = f"Please explain: {case.question.rstrip('?')}?"
+        perturbed = pipeline.retriever.retrieve(
+            perturbed_question,
+            top_k=top_k,
+            filters=case.filters,
+        )
+        original_ids = [item.chunk.id for item in original]
+        perturbed_ids = [item.chunk.id for item in perturbed]
+        union = set(original_ids) | set(perturbed_ids)
+        overlap = set(original_ids) & set(perturbed_ids)
+        rows.append(
+            {
+                "id": case.id,
+                "set_jaccard": len(overlap) / len(union) if union else 1.0,
+                "top1_consistent": float(
+                    bool(original_ids and perturbed_ids and original_ids[0] == perturbed_ids[0])
+                ),
+                "rank_overlap": sum(
+                    left == right for left, right in zip(original_ids, perturbed_ids)
+                )
+                / max(len(original_ids), len(perturbed_ids), 1),
+            }
+        )
+    return {
+        "cases": len(rows),
+        "mean_set_jaccard": mean(row["set_jaccard"] for row in rows) if rows else 0.0,
+        "top1_consistency": mean(row["top1_consistent"] for row in rows) if rows else 0.0,
+        "mean_rank_overlap": mean(row["rank_overlap"] for row in rows) if rows else 0.0,
+        "rows": rows,
     }
 
 

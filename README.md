@@ -37,6 +37,7 @@ The default implementation runs locally with deterministic embeddings and an ext
 - Retrieval-confidence calibration with ECE and Brier score against evidence hits
 - Selective risk–coverage curves for confidence-based retrieval acceptance
 - Query-level failure analysis for complete, partial, and missed retrieval plus citation failures
+- Retrieval stability checks under small natural-language query perturbations
 - Latency, token, and estimated cost tracking
 - Query-result caching
 - FastAPI backend
