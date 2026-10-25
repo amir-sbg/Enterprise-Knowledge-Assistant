@@ -43,6 +43,7 @@ class RAGPipeline:
         top_k: int = 5,
         filters: dict[str, str] | None = None,
         score_floor: float | None = None,
+        min_score_margin: float | None = None,
         use_cache: bool = True,
     ) -> Answer:
         if not question or not question.strip():
@@ -51,6 +52,8 @@ class RAGPipeline:
             raise ValueError("top_k must be positive")
         if score_floor is not None and score_floor < 0:
             raise ValueError("score_floor must not be negative")
+        if min_score_margin is not None and min_score_margin < 0:
+            raise ValueError("min_score_margin must not be negative")
         question = " ".join(question.split())
         filters = filters or {}
         cache_key = {
@@ -58,6 +61,7 @@ class RAGPipeline:
             "top_k": top_k,
             "filters": filters,
             "score_floor": score_floor,
+            "min_score_margin": min_score_margin,
         }
         if self.cache and use_cache:
             cached = self.cache.get(cache_key)
@@ -70,6 +74,16 @@ class RAGPipeline:
             retrieved = self.retriever.retrieve(question, top_k=top_k, filters=filters)
             if score_floor is not None:
                 retrieved = [item for item in retrieved if item.score >= score_floor]
+            selective_abstention = False
+            if min_score_margin is not None and retrieved:
+                margin = (
+                    retrieved[0].score - retrieved[1].score
+                    if len(retrieved) > 1
+                    else retrieved[0].score
+                )
+                selective_abstention = margin < min_score_margin
+                if selective_abstention:
+                    retrieved = []
             answer = self.answerer.answer(question, retrieved)
             report = self.verifier.verify(answer)
 
@@ -84,6 +98,8 @@ class RAGPipeline:
             "faithfulness": round(report.faithfulness, 4),
             "unsupported_claims": report.unsupported_claims,
             "retrieval_score_floor": score_floor,
+            "minimum_score_margin": min_score_margin,
+            "selective_abstention": int(selective_abstention),
             "low_evidence_answer": int(score_floor is not None and not retrieved),
             "cache_hit": 0,
             **retrieval_coverage_metrics(retrieved),

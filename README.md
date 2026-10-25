@@ -25,6 +25,7 @@ The default implementation runs locally with deterministic embeddings and an ext
 - Query rewriting
 - Citation-aware answer generation
 - Low-evidence abstention with a configurable retrieval score floor
+- Selective abstention when the top evidence margin is too ambiguous
 - Citation verification and faithfulness checks
 - Retrieval and answer evaluation suite
 - Bootstrap confidence intervals for key retrieval, faithfulness, and citation metrics

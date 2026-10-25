@@ -33,6 +33,7 @@ class QueryRequest(BaseModel):
     top_k: int = Field(5, ge=1, le=12)
     filters: dict[str, str] = Field(default_factory=dict)
     score_floor: float | None = Field(None, ge=0.0)
+    min_score_margin: float | None = Field(None, ge=0.0)
     use_cache: bool = True
 
 
@@ -82,6 +83,7 @@ def query(request: QueryRequest) -> dict[str, Any]:
         top_k=request.top_k,
         filters=request.filters,
         score_floor=request.score_floor,
+        min_score_margin=request.min_score_margin,
         use_cache=request.use_cache,
     )
     return answer_to_dict(answer)

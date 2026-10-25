@@ -70,6 +70,18 @@ def test_pipeline_rejects_negative_score_floor(tmp_path: Path):
         pipeline.ask("hello", score_floor=-0.1)
 
 
+def test_pipeline_can_abstain_on_ambiguous_retrieval_margin(tmp_path: Path):
+    index_path = tmp_path / "idx"
+    build_index("data/sample_docs", index_path)
+    pipeline = RAGPipeline.load(index_path)
+
+    answer = pipeline.ask("What is the policy?", top_k=3, min_score_margin=1.0)
+
+    assert "could not find enough evidence" in answer.text.lower()
+    assert answer.metrics["selective_abstention"] == 1
+    assert answer.metrics["retrieved_chunks"] == 0
+
+
 def test_pipeline_normalizes_questions_and_reports_cache_hits(tmp_path: Path):
     index_path = tmp_path / "idx"
     cache_path = tmp_path / "cache.json"
