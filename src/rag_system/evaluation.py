@@ -119,6 +119,10 @@ def evaluate_pipeline(
         [float(row["retrieval_confidence"]) for row in rows],
         [int(row["retrieval_hit"]) for row in rows],
     )
+    summary["selective_retrieval"] = selective_risk_coverage_curve(
+        [float(row["retrieval_confidence"]) for row in rows],
+        [int(row["retrieval_hit"]) for row in rows],
+    )
     summary["failure_analysis"] = retrieval_failure_summary(rows)
     return {
         "summary": summary,
@@ -179,6 +183,55 @@ def retrieval_confidence_calibration(
         "ece": round(ece, 4),
         "brier_score": round(brier, 4),
         "bins": calibration_rows,
+    }
+
+
+def selective_risk_coverage_curve(
+    confidences: list[float],
+    outcomes: list[int],
+    *,
+    coverages: tuple[float, ...] = (0.25, 0.50, 0.75, 1.0),
+) -> dict[str, Any]:
+    if len(confidences) != len(outcomes):
+        raise ValueError("confidence and outcome rows must match")
+    if any(not 0.0 <= value <= 1.0 for value in confidences):
+        raise ValueError("retrieval confidences must be in [0, 1]")
+    if any(value not in {0, 1} for value in outcomes):
+        raise ValueError("retrieval outcomes must be binary")
+    if any(not 0.0 < coverage <= 1.0 for coverage in coverages):
+        raise ValueError("coverages must be inside (0, 1]")
+    if not confidences:
+        return {"rows": 0, "curve": [], "area_under_risk_coverage": 0.0}
+
+    ranked = sorted(zip(confidences, outcomes), key=lambda row: row[0], reverse=True)
+    curve = []
+    for coverage in sorted(set(coverages)):
+        accepted = max(1, math.ceil(coverage * len(ranked)))
+        selected = ranked[:accepted]
+        accuracy = mean(outcome for _, outcome in selected)
+        curve.append(
+            {
+                "target_coverage": float(coverage),
+                "observed_coverage": accepted / len(ranked),
+                "accepted_queries": accepted,
+                "confidence_threshold": float(selected[-1][0]),
+                "retrieval_accuracy": float(accuracy),
+                "selective_risk": float(1.0 - accuracy),
+            }
+        )
+    area = 0.0
+    previous_coverage = 0.0
+    previous_risk = curve[0]["selective_risk"]
+    for row in curve:
+        area += (row["observed_coverage"] - previous_coverage) * (
+            previous_risk + row["selective_risk"]
+        ) / 2.0
+        previous_coverage = row["observed_coverage"]
+        previous_risk = row["selective_risk"]
+    return {
+        "rows": len(ranked),
+        "curve": curve,
+        "area_under_risk_coverage": float(area),
     }
 
 

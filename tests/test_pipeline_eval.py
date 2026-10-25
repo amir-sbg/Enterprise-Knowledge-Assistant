@@ -15,6 +15,7 @@ from rag_system.evaluation import (
     paired_sign_test,
     retrieval_confidence_calibration,
     retrieval_failure_summary,
+    selective_risk_coverage_curve,
 )
 from rag_system.pipeline import (
     RAGPipeline,
@@ -137,6 +138,18 @@ def test_retrieval_confidence_calibration_reports_reliability() -> None:
     assert report["brier_score"] == pytest.approx(0.0375)
     assert report["ece"] == pytest.approx(0.175)
     assert len(report["bins"]) == 2
+
+
+def test_selective_curve_improves_risk_at_low_coverage() -> None:
+    report = selective_risk_coverage_curve(
+        confidences=[0.95, 0.80, 0.30, 0.10],
+        outcomes=[1, 1, 0, 0],
+        coverages=(0.5, 1.0),
+    )
+
+    assert report["curve"][0]["selective_risk"] == 0.0
+    assert report["curve"][1]["selective_risk"] == 0.5
+    assert report["area_under_risk_coverage"] >= 0.0
 
 
 def test_retrieval_failure_summary_separates_failure_modes() -> None:
