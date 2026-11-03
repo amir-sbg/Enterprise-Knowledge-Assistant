@@ -2,6 +2,7 @@ import pytest
 
 from rag_system.bm25 import BM25Index
 from rag_system.chunking import TokenChunker
+from rag_system.context import pack_context
 from rag_system.diversity import diversify_results
 from rag_system.embeddings import HashEmbeddingModel
 from rag_system.reranker import LightweightReranker
@@ -202,3 +203,17 @@ def test_diversifier_validates_settings():
         diversify_results([], top_k=0)
     with pytest.raises(ValueError, match="diversity_weight"):
         diversify_results([], top_k=1, diversity_weight=1.5)
+
+
+def test_context_packing_caps_repeated_chunks_from_one_document():
+    items = [
+        RetrievedChunk(Chunk("a1", "security", "first security passage"), score=0.9),
+        RetrievedChunk(Chunk("a2", "security", "second security passage"), score=0.8),
+        RetrievedChunk(Chunk("b1", "governance", "model governance passage"), score=0.7),
+    ]
+
+    selected, metrics = pack_context(items, max_chunks_per_document=1)
+
+    assert [item.chunk.id for item in selected] == ["a1", "b1"]
+    assert metrics["context_chunks_dropped_for_source_cap"] == 1
+    assert metrics["max_chunks_per_document"] == 1

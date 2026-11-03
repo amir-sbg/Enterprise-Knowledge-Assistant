@@ -35,6 +35,7 @@ class QueryRequest(BaseModel):
     score_floor: float | None = Field(None, ge=0.0)
     min_score_margin: float | None = Field(None, ge=0.0)
     context_token_budget: int | None = Field(None, ge=1)
+    max_chunks_per_document: int | None = Field(None, ge=1)
     use_cache: bool = True
 
 
@@ -86,6 +87,7 @@ def query(request: QueryRequest) -> dict[str, Any]:
         score_floor=request.score_floor,
         min_score_margin=request.min_score_margin,
         context_token_budget=request.context_token_budget,
+        max_chunks_per_document=request.max_chunks_per_document,
         use_cache=request.use_cache,
     )
     return answer_to_dict(answer)

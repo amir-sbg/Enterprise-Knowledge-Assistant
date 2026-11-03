@@ -36,6 +36,7 @@ def main() -> None:
     ask.add_argument("--score-floor", type=float)
     ask.add_argument("--min-score-margin", type=float)
     ask.add_argument("--context-token-budget", type=int)
+    ask.add_argument("--max-chunks-per-document", type=int)
     ask.add_argument("--no-cache", action="store_true")
     ask.add_argument("--trace", action="store_true", help="include retrieval score details")
 
@@ -66,6 +67,7 @@ def main() -> None:
             score_floor=args.score_floor,
             min_score_margin=args.min_score_margin,
             context_token_budget=args.context_token_budget,
+            max_chunks_per_document=args.max_chunks_per_document,
             use_cache=not args.no_cache,
         )
         payload = answer_to_dict(answer)
