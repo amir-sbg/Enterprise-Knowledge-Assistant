@@ -107,6 +107,35 @@ def test_pipeline_rejects_empty_question(tmp_path: Path):
         pipeline.ask(" ")
 
 
+def test_pipeline_packs_ranked_evidence_into_context_budget(tmp_path: Path):
+    index_path = tmp_path / "idx"
+    build_index("data/sample_docs", index_path, chunk_size=30, overlap=5)
+    pipeline = RAGPipeline.load(index_path)
+
+    answer = pipeline.ask(
+        "What should employees do before sending restricted data?",
+        top_k=5,
+        context_token_budget=45,
+    )
+
+    assert answer.retrieval
+    assert answer.metrics["context_tokens_used"] <= 45
+    assert answer.metrics["context_chunks_dropped"] >= 1
+    assert answer.metrics["context_token_budget"] == 45
+
+
+def test_pipeline_abstains_when_no_chunk_fits_context_budget(tmp_path: Path):
+    index_path = tmp_path / "idx"
+    build_index("data/sample_docs", index_path)
+    pipeline = RAGPipeline.load(index_path)
+
+    answer = pipeline.ask("What is the incident policy?", context_token_budget=1)
+
+    assert not answer.retrieval
+    assert answer.metrics["context_budget_exhausted"] == 1
+    assert "could not find enough evidence" in answer.text.lower()
+
+
 def test_eval_suite_reports_retrieval_metrics(tmp_path: Path):
     index_path = tmp_path / "idx"
     build_index("data/sample_docs", index_path)

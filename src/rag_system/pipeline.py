@@ -10,6 +10,7 @@ from rag_system.bm25 import BM25Index
 from rag_system.cache import JsonQueryCache
 from rag_system.chunking import TokenChunker
 from rag_system.citations import CitationVerifier
+from rag_system.context import pack_context
 from rag_system.embeddings import HashEmbeddingModel
 from rag_system.generation import ExtractiveAnswerer
 from rag_system.parsing import load_documents
@@ -44,6 +45,7 @@ class RAGPipeline:
         filters: dict[str, str] | None = None,
         score_floor: float | None = None,
         min_score_margin: float | None = None,
+        context_token_budget: int | None = None,
         use_cache: bool = True,
     ) -> Answer:
         if not question or not question.strip():
@@ -54,6 +56,8 @@ class RAGPipeline:
             raise ValueError("score_floor must not be negative")
         if min_score_margin is not None and min_score_margin < 0:
             raise ValueError("min_score_margin must not be negative")
+        if context_token_budget is not None and context_token_budget < 1:
+            raise ValueError("context_token_budget must be positive")
         question = " ".join(question.split())
         filters = filters or {}
         cache_key = {
@@ -62,6 +66,7 @@ class RAGPipeline:
             "filters": filters,
             "score_floor": score_floor,
             "min_score_margin": min_score_margin,
+            "context_token_budget": context_token_budget,
         }
         if self.cache and use_cache:
             cached = self.cache.get(cache_key)
@@ -84,6 +89,18 @@ class RAGPipeline:
                 selective_abstention = margin < min_score_margin
                 if selective_abstention:
                     retrieved = []
+            context_metrics = {
+                "context_token_budget": context_token_budget,
+                "context_tokens_used": sum(
+                    estimate_tokens(item.chunk.text) for item in retrieved
+                ),
+                "context_chunks_dropped": 0,
+            }
+            if context_token_budget is not None and retrieved:
+                retrieved, context_metrics = pack_context(
+                    retrieved,
+                    token_budget=context_token_budget,
+                )
             answer = self.answerer.answer(question, retrieved)
             report = self.verifier.verify(answer)
 
@@ -101,7 +118,13 @@ class RAGPipeline:
             "minimum_score_margin": min_score_margin,
             "selective_abstention": int(selective_abstention),
             "low_evidence_answer": int(score_floor is not None and not retrieved),
+            "context_budget_exhausted": int(
+                context_token_budget is not None
+                and not retrieved
+                and context_metrics["context_chunks_dropped"] > 0
+            ),
             "cache_hit": 0,
+            **context_metrics,
             **retrieval_coverage_metrics(retrieved),
         }
 
